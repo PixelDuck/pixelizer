@@ -33,6 +33,7 @@ import javax.swing.JToggleButton;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class Pixelizer extends JFrame {
 
@@ -67,18 +68,23 @@ public class Pixelizer extends JFrame {
 		JMenu menuOpen = new JMenu("File");
 		JMenuItem openMenu = new JMenuItem("Open...");
 		openMenu.setActionCommand("open");
-		openMenu.addActionListener(new InternalActionListener(this));
+        InternalActionListener actionListener = new InternalActionListener(this);
+        openMenu.addActionListener(actionListener);
 		menuOpen.add(openMenu);
-		JMenuItem saveMenu = new JMenuItem("Save source code...");
-		saveMenu.setActionCommand("save");
-		saveMenu.addActionListener(new InternalActionListener(this));
-		menuOpen.add(saveMenu);
+		JMenuItem saveMenuAsCode = new JMenuItem("Save as code...");
+		saveMenuAsCode.setActionCommand("save_as_code");
+		saveMenuAsCode.addActionListener(actionListener);
+		menuOpen.add(saveMenuAsCode);
+        JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
+        saveMenuAsPng.setActionCommand("save_as_PNG");
+        saveMenuAsPng.addActionListener(actionListener);
+        menuOpen.add(saveMenuAsPng);
 		this.menuBar.add(menuOpen);
 
 		JMenu menuEdit = new JMenu("Edit");
 		JMenuItem clearChangesMenu = new JMenuItem("Clear changes");
 		clearChangesMenu.setActionCommand("clear");
-		clearChangesMenu.addActionListener(new InternalActionListener(this));
+		clearChangesMenu.addActionListener(actionListener);
 		menuEdit.add(clearChangesMenu);
 		menuBar.add(menuEdit);
 
@@ -86,17 +92,17 @@ public class Pixelizer extends JFrame {
 		JCheckBoxMenuItem showImage = new JCheckBoxMenuItem("Show image");
 		showImage.setSelected(this.showImage);
 		showImage.setActionCommand("showImage");
-		showImage.addActionListener(new InternalActionListener(this));
+		showImage.addActionListener(actionListener);
 		menuDisplay.add(showImage);
 		JCheckBoxMenuItem showChange = new JCheckBoxMenuItem("Show change");
 		showChange.setSelected(this.showChange);
 		showChange.setActionCommand("showChange");
-		showChange.addActionListener(new InternalActionListener(this));
+		showChange.addActionListener(actionListener);
 		menuDisplay.add(showChange);
 		JCheckBoxMenuItem selectAlpha = new JCheckBoxMenuItem("Select alpha");
 		selectAlpha.setSelected(this.alphaMask);
 		selectAlpha.setActionCommand("selectAlpha");
-		selectAlpha.addActionListener(new InternalActionListener(this));
+		selectAlpha.addActionListener(actionListener);
 		menuDisplay.add(selectAlpha);
 		menuBar.add(menuDisplay);
 		setJMenuBar(menuBar);
@@ -155,7 +161,6 @@ public class Pixelizer extends JFrame {
 					});
 			colorChooserPanel.add(this.colorChooser);
 			setContentPane(colorChooserPanel);
-			setVisible(true);
 		}
 
 		public Color getColor() {
@@ -307,9 +312,10 @@ public class Pixelizer extends JFrame {
 		public void actionPerformed(ActionEvent e) {
 			if (e.getActionCommand().equals("open")) {
 				this.parent.actionOpenFile();
-			}
-			if (e.getActionCommand().equals("save")) {
+			} else if (e.getActionCommand().equals("save_as_code")) {
 				this.parent.actionSaveSourceCode();
+            } else if (e.getActionCommand().equals("save_as_PNG")) {
+                this.parent.actionSaveAsPNG();
 			} else if (e.getActionCommand().equals("clear")) {
 				this.parent.actionClearChange();
 			} else if (e.getActionCommand().equals("showImage")) {
@@ -547,7 +553,39 @@ public class Pixelizer extends JFrame {
 
 	}
 
-	public void actionSaveSourceCode() {
+    public void actionSaveAsPNG(){
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new FileNameExtensionFilter("PNG image file", "png"));
+        if(fileChooser.showDialog(this, "Save")==JFileChooser.APPROVE_OPTION){
+            File f = fileChooser.getSelectedFile();
+            try {
+                BufferedImage bImg = new BufferedImage(pixelsRgba.length, pixelsRgba[0].length, BufferedImage.TYPE_INT_ARGB_PRE);
+                for (int i = 0; i < pixelsRgba.length; i++) {
+                    for (int j = 0; j < pixelsRgba[i].length; j++) {
+                        bImg.setRGB(i, j, toARGB(toInt(pixelsRgba[i][j], imagePixelsRgba[i][j])));
+                    }
+                }
+
+                ImageIO.write(bImg, "png", f);
+                JOptionPane.showMessageDialog(this, "File "+f.getName()+" saved!");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Failed to save "+f.getName()+": "+e.getMessage(), "Error occured", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    private int toARGB(int rgba) {
+        String ret = Integer.toHexString(rgba).toUpperCase();
+        if(ret.length()<=6){
+            return rgba | 0xFF000000;
+        } else {
+            return Integer.parseInt(ret.substring(6)+ret.substring(0, 5), 16);
+        }
+    }
+
+    public void actionSaveSourceCode() {
 		StringBuilder code = new StringBuilder(
 				"Integer[][] pixels = new Integer[][]{\n");
 		for (int i = 0; i < pixelsRgba.length; i++) {
@@ -571,7 +609,7 @@ public class Pixelizer extends JFrame {
 	}
 
 	private String toHex(Integer i1, Integer i2) {
-		int i = i1 != null ? i1 : i2;
+		int i = toInt(i1, i2);
 		String ret = Integer.toHexString(i);
 		if (ret.length() == 6) {
 			ret = "0x00" + ret;
@@ -580,6 +618,10 @@ public class Pixelizer extends JFrame {
 		}
 		return ret;
 	}
+
+    private int toInt(Integer i1, Integer i2) {
+        return i1 != null ? i1 : i2;
+    }
 
 	private void showImage(File selectedFile) {
 		this.imagePanel.setImage(selectedFile);
