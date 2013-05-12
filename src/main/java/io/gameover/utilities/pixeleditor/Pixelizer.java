@@ -1,3 +1,15 @@
+/*
+ * Copyright © 2013, Olivier MARTIN, aka ekki77
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders X be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the Software.
+ *
+ * Except as contained in this notice, the name of the copyright holders shall not be used in advertising or otherwise to promote the sale, use or other dealings in this Software without prior written authorization from the copyright holders.
+ */
+
 package io.gameover.utilities.pixeleditor;
 
 import java.awt.BorderLayout;
@@ -18,6 +30,8 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBoxMenuItem;
@@ -35,32 +49,37 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+/**
+ * Main class.
+ */
 public class Pixelizer extends JFrame {
 
 	private static final long serialVersionUID = 1L;
-	private static final int PIXEL_SIZE = 20;
+
+	private static final int PIXEL_SIZE = 10;
 	private static final int MARGIN = 1;
 
-	private int nbPixelsHorizontal = 20;
-	private int nbPixelsVertical = 20;
+	private int nbPixelsHorizontal = 32;
+	private int nbPixelsVertical = 32;
 	private ImagePanel imagePanel;
 	private JMenuBar menuBar;
-	private boolean pixelView = true;
-	private int[][] imagePixelsRgba;
-	private Integer[][] pixelsRgba;
-	private Integer[][] alphaMaskRgba;
-	private boolean showImage = true;
-	private boolean showChange = true;
+	private int[][] pixelsRgba;
+    private List<Integer[][]> savedState;
 	private ColorChooser colorChooser;
-	private boolean alphaMask = false;
 
+    /**
+     * Constructor.
+     */
 	public Pixelizer() {
+        reset();
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		setTitle("Image viewer");
+		setTitle("Pixelizer");
+
+        savedState = new ArrayList<Integer[][]>();
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.menuBar = new JMenuBar();
@@ -71,10 +90,6 @@ public class Pixelizer extends JFrame {
         InternalActionListener actionListener = new InternalActionListener(this);
         openMenu.addActionListener(actionListener);
 		menuOpen.add(openMenu);
-		JMenuItem saveMenuAsCode = new JMenuItem("Save as code...");
-		saveMenuAsCode.setActionCommand("save_as_code");
-		saveMenuAsCode.addActionListener(actionListener);
-		menuOpen.add(saveMenuAsCode);
         JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
         saveMenuAsPng.setActionCommand("save_as_PNG");
         saveMenuAsPng.addActionListener(actionListener);
@@ -88,35 +103,16 @@ public class Pixelizer extends JFrame {
 		menuEdit.add(clearChangesMenu);
 		menuBar.add(menuEdit);
 
-		JMenu menuDisplay = new JMenu("View");
-		JCheckBoxMenuItem showImage = new JCheckBoxMenuItem("Show image");
-		showImage.setSelected(this.showImage);
-		showImage.setActionCommand("showImage");
-		showImage.addActionListener(actionListener);
-		menuDisplay.add(showImage);
-		JCheckBoxMenuItem showChange = new JCheckBoxMenuItem("Show change");
-		showChange.setSelected(this.showChange);
-		showChange.setActionCommand("showChange");
-		showChange.addActionListener(actionListener);
-		menuDisplay.add(showChange);
-		JCheckBoxMenuItem selectAlpha = new JCheckBoxMenuItem("Select alpha");
-		selectAlpha.setSelected(this.alphaMask);
-		selectAlpha.setActionCommand("selectAlpha");
-		selectAlpha.addActionListener(actionListener);
-		menuDisplay.add(selectAlpha);
-		menuBar.add(menuDisplay);
 		setJMenuBar(menuBar);
 
-		JPanel mainpanel = new JPanel();
-		mainpanel.setLayout(new BorderLayout());
+		JPanel mainPanel = new JPanel();
+		mainPanel.setLayout(new BorderLayout());
 		this.imagePanel = new ImagePanel(this);
-		this.imagePanel
-				.addComponentListener(new InternalComponentListener(this));
 		InternalMouseListener mouseListener = new InternalMouseListener(this);
 		this.imagePanel.addMouseListener(mouseListener);
 		this.imagePanel.addMouseMotionListener(mouseListener);
-		mainpanel.add(imagePanel, BorderLayout.CENTER);
-		setContentPane(mainpanel);
+		mainPanel.add(imagePanel, BorderLayout.CENTER);
+		setContentPane(mainPanel);
 
 		setSize(new Dimension(getImageWidth() + 6, getImageHeight()
 				+ (int) menuBar.getPreferredSize().getHeight() + 60));
@@ -187,49 +183,6 @@ public class Pixelizer extends JFrame {
 		}
 	}
 
-	private class InternalComponentListener implements ComponentListener {
-		private Pixelizer parent;
-
-		public InternalComponentListener(Pixelizer parent) {
-			this.parent = parent;
-
-		}
-
-		@Override
-		public void componentResized(ComponentEvent e) {
-			int h = this.parent.nbPixelsHorizontal;
-			int v = this.parent.nbPixelsVertical;
-			this.parent.nbPixelsHorizontal = (e.getComponent().getWidth() - MARGIN)
-					/ (PIXEL_SIZE + MARGIN);
-			this.parent.nbPixelsVertical = (e.getComponent().getHeight() - MARGIN)
-					/ (PIXEL_SIZE + MARGIN);
-			if (h != this.parent.nbPixelsHorizontal
-					|| v != this.parent.nbPixelsVertical) {
-				pixelsRgba = new Integer[getNbH()][getNbV()];
-				alphaMaskRgba = new Integer[getNbH()][getNbV()];
-				convertCurentImageToPixels();
-			}
-		}
-
-		@Override
-		public void componentMoved(ComponentEvent e) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void componentShown(ComponentEvent e) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void componentHidden(ComponentEvent e) {
-			// TODO Auto-generated method stub
-
-		}
-
-	}
 
 	private int getImageWidth() {
 		return (PIXEL_SIZE + MARGIN) * getNbH() + MARGIN;
@@ -254,9 +207,6 @@ public class Pixelizer extends JFrame {
 				this.isMousePressed = false;
 				switch (e.getButton()) {
 				default:
-				case MouseEvent.BUTTON2:
-					this.parent.changePixelView();
-					break;
 				case MouseEvent.BUTTON1:
 					updatePaint(e.getX(), e.getY());
 					break;
@@ -318,12 +268,6 @@ public class Pixelizer extends JFrame {
                 this.parent.actionSaveAsPNG();
 			} else if (e.getActionCommand().equals("clear")) {
 				this.parent.actionClearChange();
-			} else if (e.getActionCommand().equals("showImage")) {
-				this.parent.actionShowImage();
-			} else if (e.getActionCommand().equals("showChange")) {
-				this.parent.actionShowChange();
-			} else if (e.getActionCommand().equals("selectAlpha")) {
-				this.parent.actionShowAlpha();
 			}
 		}
 	}
@@ -358,65 +302,46 @@ public class Pixelizer extends JFrame {
 			if (image != null)
 				g2d.drawImage(image, 0, 0, w, h, null);
 
-			if (this.parent.pixelView) {
-				for (int i = 0; i < this.parent.getNbH(); i++) {
-					g2d.setPaint(Color.black);
-					g2d.fillRect((i + 1) * (PIXEL_SIZE + MARGIN), 0, MARGIN, h);
-					for (int j = 0; j < this.parent.getNbV(); j++) {
-						g2d.setPaint(Color.GRAY);
-						g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
-								+ j * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
-								PIXEL_SIZE / 2);
-						g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
-								+ PIXEL_SIZE / 2, MARGIN + j
-								* (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
-								PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-						g2d.setPaint(Color.LIGHT_GRAY);
-						g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
-								+ PIXEL_SIZE / 2, MARGIN + j
-								* (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
-								PIXEL_SIZE / 2);
-						g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
-								+ j * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
-								PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-						g2d.setPaint(Color.black);
-						g2d.fillRect(0, (j + 1) * (PIXEL_SIZE + MARGIN), w,
-								MARGIN);
-					}
-				}
-				g2d.setPaint(Color.black);
-				g2d.fillRect(0, 0, w, MARGIN);
-				g2d.fillRect(0, 0, MARGIN, h);
-				for (int i = 0; i < this.parent.getNbH(); i++) {
-					for (int j = 0; j < this.parent.getNbV(); j++) {
-						int c = 0xffffffff;
-						if (this.parent.showImage && imagePixelsRgba != null
-								&& imagePixelsRgba[i][j] >= 0) {
-							c = imagePixelsRgba[i][j];
-						}
-						if (this.parent.showChange && pixelsRgba != null
-								&& pixelsRgba[i][j] != null) {
-							c = pixelsRgba[i][j];
-						}
-						if (c != 0xffffffff) {
-							g2d.setPaint(new Color(c));
-							g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN),
-									MARGIN + j * (PIXEL_SIZE + MARGIN),
-									PIXEL_SIZE, PIXEL_SIZE);
-						}
-						if (alphaMask) {
-							g2d.setPaint(Color.GRAY);
-							g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN),
-									MARGIN + j * (PIXEL_SIZE + MARGIN),
-									PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-							g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
-									+ PIXEL_SIZE / 2, MARGIN + j
-									* (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
-									PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-						}
-					}
-				}
-			}
+            for (int i = 0; i < this.parent.getNbH(); i++) {
+                g2d.setPaint(Color.black);
+                g2d.fillRect((i + 1) * (PIXEL_SIZE + MARGIN), 0, MARGIN, h);
+                for (int j = 0; j < this.parent.getNbV(); j++) {
+                    g2d.setPaint(Color.GRAY);
+                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
+                            + j * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
+                            PIXEL_SIZE / 2);
+                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
+                            + PIXEL_SIZE / 2, MARGIN + j
+                            * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
+                            PIXEL_SIZE / 2, PIXEL_SIZE / 2);
+                    g2d.setPaint(Color.LIGHT_GRAY);
+                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
+                            + PIXEL_SIZE / 2, MARGIN + j
+                            * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
+                            PIXEL_SIZE / 2);
+                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
+                            + j * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
+                            PIXEL_SIZE / 2, PIXEL_SIZE / 2);
+                    g2d.setPaint(Color.black);
+                    g2d.fillRect(0, (j + 1) * (PIXEL_SIZE + MARGIN), w,
+                            MARGIN);
+                }
+            }
+            g2d.setPaint(Color.black);
+            g2d.fillRect(0, 0, w, MARGIN);
+            g2d.fillRect(0, 0, MARGIN, h);
+            for (int i = 0; i < this.parent.getNbH(); i++) {
+                for (int j = 0; j < this.parent.getNbV(); j++) {
+                    //int c = 0xffffffff;
+                    int c = pixelsRgba[i][j];
+                    if (c != 0xffffffff) {
+                        g2d.setPaint(new Color(c));
+                        g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN),
+                                MARGIN + j * (PIXEL_SIZE + MARGIN),
+                                PIXEL_SIZE, PIXEL_SIZE);
+                    }
+                }
+            }
 			g2d.dispose();
 			Toolkit.getDefaultToolkit().sync();
 		}
@@ -426,35 +351,8 @@ public class Pixelizer extends JFrame {
 		return this.nbPixelsHorizontal;
 	}
 
-	public void actionShowAlpha() {
-		if (alphaMask) {
-			alphaMask = false;
-			this.alphaMaskRgba = null;
-		} else {
-			alphaMask = true;
-			alphaMaskRgba = new Integer[getNbH()][getNbV()];
-		}
-		repaint();
-	}
-
-	public void actionShowImage() {
-		this.showImage = !showImage;
-		this.imagePanel.repaint();
-	}
-
-	public void actionShowChange() {
-		this.showChange = !showChange;
-		this.imagePanel.repaint();
-	}
-
 	public void updateColorChooser(int i, int j) {
-		if (this.pixelsRgba[i][j] != null)
-			updateColorChooser(i, j, this.pixelsRgba[i][j]);
-		else if (imagePixelsRgba != null && this.imagePixelsRgba.length > i
-				&& imagePixelsRgba[i].length > j)
-			updateColorChooser(i, j, this.imagePixelsRgba[i][j]);
-		else
-			updateColorChooser(i, j, 0x00000000);
+		updateColorChooser(i, j, this.pixelsRgba[i][j]);
 	}
 
 	public void updateColorChooser(int i, int j, int p) {
@@ -488,7 +386,7 @@ public class Pixelizer extends JFrame {
 
 	public void convertToPixelImage(BufferedImage image) {
 		if (image != null) {
-			imagePixelsRgba = new int[getNbH()][getNbV()];
+            actionClearChange();
 			int nbImgPixelPerHPixel = image.getWidth() / getNbH();
 			int nbImgPixelPerVPixel = image.getHeight() / getNbV();
 			for (int h = 0; h < getNbH(); h++) {
@@ -511,28 +409,28 @@ public class Pixelizer extends JFrame {
 							count++;
 						}
 					}
-					imagePixelsRgba[h][v] = 0x00000000;
+                    pixelsRgba[h][v] = 0x00000000;
 					if (count != 0) {
-						imagePixelsRgba[h][v] += (sumR / count << 16) & 0x00ff0000;
-						imagePixelsRgba[h][v] += (sumG / count << 8) & 0x0000ff00;
-						imagePixelsRgba[h][v] += (sumB / count) & 0x000000ff;
+                        pixelsRgba[h][v] += (sumR / count << 16) & 0x00ff0000;
+                        pixelsRgba[h][v] += (sumG / count << 8) & 0x0000ff00;
+                        pixelsRgba[h][v] += (sumB / count) & 0x000000ff;
 					}
 				}
 			}
 		}
 	}
 
-	public void changePixelView() {
-		changePixelView(!this.pixelView);
-	}
-
-	public void changePixelView(boolean b) {
-		this.pixelView = b;
-		this.imagePanel.repaint();
-	}
+    public void reset(){
+        pixelsRgba = new int[getNbH()][getNbV()];
+        for(int i=0; i<pixelsRgba.length; i++){
+            for(int j=0; j<pixelsRgba[0].length; j++){
+                pixelsRgba[i][j] = 0xffffffff;
+            }
+        }
+    }
 
 	public void actionClearChange() {
-		pixelsRgba = new Integer[getNbH()][getNbV()];
+		reset();
 		this.imagePanel.repaint();
 	}
 
@@ -562,7 +460,7 @@ public class Pixelizer extends JFrame {
                 BufferedImage bImg = new BufferedImage(pixelsRgba.length, pixelsRgba[0].length, BufferedImage.TYPE_INT_ARGB_PRE);
                 for (int i = 0; i < pixelsRgba.length; i++) {
                     for (int j = 0; j < pixelsRgba[i].length; j++) {
-                        bImg.setRGB(i, j, toARGB(toInt(pixelsRgba[i][j], imagePixelsRgba[i][j])));
+                        bImg.setRGB(i, j, toARGB(pixelsRgba[i][j]));
                     }
                 }
 
@@ -579,7 +477,7 @@ public class Pixelizer extends JFrame {
     private int toARGB(int rgba) {
         String ret = Integer.toHexString(rgba).toUpperCase();
         if(ret.length()<=6){
-            return rgba | 0xFF000000;
+            return rgba | 0xff000000;
         } else {
             return Integer.parseInt(ret.substring(6)+ret.substring(0, 5), 16);
         }
@@ -597,7 +495,7 @@ public class Pixelizer extends JFrame {
 				if (j != 0) {
 					code.append(",");
 				}
-				code.append(toHex(pixelsRgba[i][j], imagePixelsRgba[i][j]));
+				code.append(toHex(pixelsRgba[i][j]));
 			}
 			code.append("}");
 		}
@@ -608,8 +506,7 @@ public class Pixelizer extends JFrame {
 		JOptionPane.showMessageDialog(this, "Source code copied");
 	}
 
-	private String toHex(Integer i1, Integer i2) {
-		int i = toInt(i1, i2);
+	private String toHex(Integer i) {
 		String ret = Integer.toHexString(i);
 		if (ret.length() == 6) {
 			ret = "0x00" + ret;
@@ -618,10 +515,6 @@ public class Pixelizer extends JFrame {
 		}
 		return ret;
 	}
-
-    private int toInt(Integer i1, Integer i2) {
-        return i1 != null ? i1 : i2;
-    }
 
 	private void showImage(File selectedFile) {
 		this.imagePanel.setImage(selectedFile);
