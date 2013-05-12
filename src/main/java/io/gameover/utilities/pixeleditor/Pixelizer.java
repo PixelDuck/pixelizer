@@ -21,12 +21,7 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -64,8 +58,20 @@ public class Pixelizer extends JFrame {
 	private ImagePanel imagePanel;
 	private JMenuBar menuBar;
 	private int[][] pixelsRgba;
-    private List<Integer[][]> savedState;
+    private List<SavedState> savedStates;
 	private ColorChooser colorChooser;
+    private int currentSaveIndex = 0;
+
+    private class SavedState{
+        private int[][] pixelsRgba;
+        public SavedState( int[][] pixelsRgba){
+            this.pixelsRgba = pixelsRgba;
+        }
+
+        public int[][] getPixelsRgba(){
+            return pixelsRgba;
+        }
+    }
 
     /**
      * Constructor.
@@ -78,41 +84,16 @@ public class Pixelizer extends JFrame {
 			e.printStackTrace();
 		}
 		setTitle("Pixelizer");
+        addKeyListener(new InternalKeyListener(this));
 
-        savedState = new ArrayList<Integer[][]>();
+        savedStates = new ArrayList<SavedState>();
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		this.menuBar = new JMenuBar();
 
-		JMenu menuOpen = new JMenu("File");
-		JMenuItem openMenu = new JMenuItem("Open...");
-		openMenu.setActionCommand("open");
-        InternalActionListener actionListener = new InternalActionListener(this);
-        openMenu.addActionListener(actionListener);
-		menuOpen.add(openMenu);
-        JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
-        saveMenuAsPng.setActionCommand("save_as_PNG");
-        saveMenuAsPng.addActionListener(actionListener);
-        menuOpen.add(saveMenuAsPng);
-		this.menuBar.add(menuOpen);
-
-		JMenu menuEdit = new JMenu("Edit");
-		JMenuItem clearChangesMenu = new JMenuItem("Clear changes");
-		clearChangesMenu.setActionCommand("clear");
-		clearChangesMenu.addActionListener(actionListener);
-		menuEdit.add(clearChangesMenu);
-		menuBar.add(menuEdit);
-
+        createMenuBar();
 		setJMenuBar(menuBar);
 
-		JPanel mainPanel = new JPanel();
-		mainPanel.setLayout(new BorderLayout());
-		this.imagePanel = new ImagePanel(this);
-		InternalMouseListener mouseListener = new InternalMouseListener(this);
-		this.imagePanel.addMouseListener(mouseListener);
-		this.imagePanel.addMouseMotionListener(mouseListener);
-		mainPanel.add(imagePanel, BorderLayout.CENTER);
-		setContentPane(mainPanel);
+        createPanels();
 
 		setSize(new Dimension(getImageWidth() + 6, getImageHeight()
 				+ (int) menuBar.getPreferredSize().getHeight() + 60));
@@ -126,7 +107,74 @@ public class Pixelizer extends JFrame {
 		colorChooser = new ColorChooser();
 	}
 
-	private class ColorChooser extends JFrame {
+    private void createPanels() {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+        this.imagePanel = new ImagePanel(this);
+        InternalMouseListener mouseListener = new InternalMouseListener(this);
+        this.imagePanel.addMouseListener(mouseListener);
+        this.imagePanel.addMouseMotionListener(mouseListener);
+        mainPanel.add(imagePanel, BorderLayout.CENTER);
+        setContentPane(mainPanel);
+    }
+
+    private void restorePreviousState(){
+        if(currentSaveIndex>0){
+            currentSaveIndex--;
+            this.pixelsRgba = savedStates.get(currentSaveIndex).getPixelsRgba();
+            repaint();
+
+        }
+    }
+
+    private void restoreNextState(){
+        if(currentSaveIndex<savedStates.size()-1){
+            currentSaveIndex++;
+            this.pixelsRgba = savedStates.get(currentSaveIndex).getPixelsRgba();
+            repaint();
+        }
+    }
+
+    private void saveBeforeModification(){
+        while(savedStates.size()>currentSaveIndex){
+            savedStates.remove(savedStates.size()-1);
+        }
+        savedStates.add(new SavedState(copyArray(pixelsRgba)));
+        this.currentSaveIndex = savedStates.size();
+    }
+
+    private int[][] copyArray(int[][] src){
+        int[][] ret = new int[src.length][src[0].length];
+        for (int i = 0; i < ret.length; i++) {
+            System.arraycopy(src[i], 0, ret[i], 0, src[0].length);
+        }
+        return ret;
+    }
+
+    private void createMenuBar() {
+        this.menuBar = new JMenuBar();
+
+        JMenu menuOpen = new JMenu("File");
+        JMenuItem openMenu = new JMenuItem("Open...");
+        openMenu.setActionCommand("open");
+        InternalActionListener actionListener = new InternalActionListener(this);
+        openMenu.addActionListener(actionListener);
+        menuOpen.add(openMenu);
+        JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
+        saveMenuAsPng.setActionCommand("save_as_PNG");
+        saveMenuAsPng.addActionListener(actionListener);
+        menuOpen.add(saveMenuAsPng);
+        this.menuBar.add(menuOpen);
+
+        JMenu menuEdit = new JMenu("Edit");
+        JMenuItem clearChangesMenu = new JMenuItem("Clear changes");
+        clearChangesMenu.setActionCommand("clear");
+        clearChangesMenu.addActionListener(actionListener);
+        menuEdit.add(clearChangesMenu);
+        menuBar.add(menuEdit);
+    }
+
+    private class ColorChooser extends JFrame {
 		private JColorChooser colorChooser;
 		private boolean noColor = true;
 		private JToggleButton noColorBTN;
@@ -368,19 +416,23 @@ public class Pixelizer extends JFrame {
 	public void updatePixelFromSelectedColor(int x, int y) {
 		if (pixelsRgba.length > x && pixelsRgba[0].length > y) {
 			Color c = this.colorChooser.getColor();
+            int px = 0xffffffff;
 			if (c != null) {
-				pixelsRgba[x][y] = 0x00000000;
-				pixelsRgba[x][y] += c.getRed() << 16 & 0x00ff0000;
-				pixelsRgba[x][y] += c.getGreen() << 8 & 0x0000ff00;
-				pixelsRgba[x][y] += c.getBlue() & 0x000000ff;
-			} else {
-				pixelsRgba[x][y] = 0xffffffff;
+				px = 0x00000000;
+                px += c.getRed() << 16 & 0x00ff0000;
+                px += c.getGreen() << 8 & 0x0000ff00;
+                px += c.getBlue() & 0x000000ff;
 			}
-			this.imagePanel.repaint();
+            if(pixelsRgba[x][y]!=px){
+                saveBeforeModification();
+                pixelsRgba[x][y] = px;
+			    this.imagePanel.repaint();
+            }
 		}
 	}
 
 	public void convertCurentImageToPixels() {
+        savedStates.clear();
 		convertToPixelImage(this.imagePanel.image);
 	}
 
@@ -430,6 +482,7 @@ public class Pixelizer extends JFrame {
     }
 
 	public void actionClearChange() {
+        savedStates.clear();
 		reset();
 		this.imagePanel.repaint();
 	}
@@ -520,4 +573,30 @@ public class Pixelizer extends JFrame {
 		this.imagePanel.setImage(selectedFile);
 	}
 
+    private class InternalKeyListener implements KeyListener {
+        private final Pixelizer parent;
+
+        public InternalKeyListener(Pixelizer parent) {
+            this.parent = parent;
+        }
+
+        @Override
+        public void keyTyped(KeyEvent e) {
+
+        }
+
+        @Override
+        public void keyPressed(KeyEvent e) {
+
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) {
+            if(e.getKeyCode()==KeyEvent.VK_Z && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
+                this.parent.restorePreviousState();
+            } else if(e.getKeyCode()==KeyEvent.VK_Y && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
+                this.parent.restoreNextState();
+            }
+        }
+    }
 }
