@@ -40,21 +40,20 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  */
 public class Pixelizer extends JFrame {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
 	private static final int PIXEL_SIZE = 10;
 	private static final int MARGIN = 1;
-
 	private static final int NB_PIXELS = 32;
+    public static final int NO_COLOR_AS_INT = 0x00ffffff;
+    private static final Color NO_COLOR = new Color(NO_COLOR_AS_INT);
+    public static final String ACTION_OPEN = "open";
+    public static final String ACTION_SAVE_AS_PNG = "save_as_PNG";
+    public static final String ACTION_CLEAR = "clear";
 
-	private ImagePanel imagePanel;
-	private JMenuBar menuBar;
-	private List<Pixels> pixelsRgba = new ArrayList<>();
-    private int currentIndex = 0;
-    private boolean[][] selectionMask;
-    private List<Pixels> savedStates;
+    private ImagePanel imagePanel;
+	private JMenuBar appMenuBar;
 	private JColorChooser colorChooser;
-    private int currentSaveIndex = 0;
     private JPanel toolsPanel;
     private JPanel tolerancePanel;
     private JPanel animationPanel;
@@ -62,34 +61,91 @@ public class Pixelizer extends JFrame {
     private Tool toolSelected = Tool.PEN;
     private JProgressBar toleranceBar;
 
-    private static class Pixels{
-        private int[][] pixelsRgba;
+    private List<Frame> frames;
+    private int currentFrameIndex;
+    private boolean[][] selectionMask;
+    private List<Frame> savedStates;
+    private int currentStateIndex;
 
-        Pixels(){
+
+    /**
+     * Constructor.
+     */
+    public Pixelizer() {
+        frames = new ArrayList<>();
+        frames.add(new Frame());
+        currentFrameIndex = 0;
+        selectionMask = new boolean[PIXEL_SIZE][PIXEL_SIZE];
+        reset();
+        applyLookAndFeel();
+        setTitle("Pixelizer");
+        addKeyListener(new InternalKeyListener(this));
+
+        savedStates = new ArrayList<>();
+        currentStateIndex = 0;
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setJMenuBar(getAppMenuBar());
+
+        initPanels();
+
+        setSize(new Dimension(800, 700));
+        centerFrame();
+        setVisible(true);
+
+    }
+
+    private void centerFrame() {
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        setLocation((screenSize.width - getSize().width) / 2,
+                (screenSize.height - getSize().height) / 2);
+    }
+
+    private void applyLookAndFeel() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static class Frame {
+        private int[][] argb;
+
+        public Frame(){
             reset();
         }
 
         public void reset() {
-            pixelsRgba = new int[NB_PIXELS][NB_PIXELS];
-            for(int i=0; i<pixelsRgba.length; i++){
-                for(int j=0; j<pixelsRgba[0].length; j++){
-                    pixelsRgba[i][j] = 0xffffffff;
+            argb = new int[NB_PIXELS][NB_PIXELS];
+            for(int i=0; i< argb.length; i++){
+                for(int j=0; j< argb[0].length; j++){
+                    argb[i][j] = NO_COLOR_AS_INT;
                 }
             }
         }
 
         public int getColor(int i, int j){
-            return pixelsRgba[i][j];
+            return argb[i][j];
         }
 
         public void setColor(int i, int j, int color){
-            pixelsRgba[i][j] = color;
+            argb[i][j] = color;
         }
 
-        public Pixels clone(){
-            Pixels p = new Pixels();
-            p.pixelsRgba = copyArray(pixelsRgba);
+        public Frame clone(){
+            Frame p = new Frame();
+            p.argb = copyArray(argb);
             return p;
+        }
+    }
+
+    private void clearSelection(){
+        for(int i=0; i<selectionMask.length; i++){
+            for(int j=0; j<selectionMask[0].length; j++){
+                selectionMask[i][j] = false;
+            }
         }
     }
 
@@ -128,7 +184,7 @@ public class Pixelizer extends JFrame {
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 1;
             gbc.gridy = 1;
-            this.tolerancePanel.add(new JLabel("tolerance"), gbc);
+            this.tolerancePanel.add(new JLabel("Tolerance"), gbc);
             gbc.gridx = 2;
             toleranceBar = new JProgressBar();
             toleranceBar.setSize(new Dimension(200, 25));
@@ -157,42 +213,11 @@ public class Pixelizer extends JFrame {
         return imagePanel;
     }
 
-    /**
-     * Constructor.
-     */
-	public Pixelizer() {
-        pixelsRgba.add(new Pixels());
-        reset();
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		setTitle("Pixelizer");
-        addKeyListener(new InternalKeyListener(this));
 
-        savedStates = new ArrayList<>();
-
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        createMenuBar();
-		setJMenuBar(menuBar);
-
-        createPanels();
-
-		setSize(new Dimension(800, 700));
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation((screenSize.width - getSize().width) / 2,
-				(screenSize.height - getSize().height) / 2);
-
-		setVisible(true);
-
-	}
-
-    private static class ToolActionListener implements ActionListener{
+    public static class ToolActionListener implements ActionListener{
         private final Pixelizer parent;
 
-        ToolActionListener(Pixelizer parent) {
+        public ToolActionListener(Pixelizer parent) {
             this.parent = parent;
         }
 
@@ -201,6 +226,9 @@ public class Pixelizer extends JFrame {
         public void actionPerformed(ActionEvent e) {
             Tool toolSelected = Tool.valueOf(e.getActionCommand());
             if(toolSelected!=this.parent.toolSelected){
+                if(toolSelected!=Tool.MAGIC_WAND&&toolSelected!=Tool.SELECT){
+                    parent.clearSelection();
+                }
                 this.parent.toolSelected.getButton().setSelected(false);
                 toolSelected.getButton().setSelected(true);
                 this.parent.toolSelected = toolSelected;
@@ -208,7 +236,7 @@ public class Pixelizer extends JFrame {
         }
     }
 
-    private void createPanels() {
+    private void initPanels() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
 
@@ -219,36 +247,37 @@ public class Pixelizer extends JFrame {
 
         mainPanel.add(getToolsPanel(), BorderLayout.WEST);
         mainPanel.add(getColorPanel(), BorderLayout.NORTH);
+        mainPanel.add(getAnimationPanel(), BorderLayout.EAST);
 
 
         setContentPane(mainPanel);
     }
 
     private void restorePreviousState(){
-        if(currentSaveIndex>0){
-            currentSaveIndex--;
-            this.pixelsRgba.remove(currentIndex);
-            this.pixelsRgba.add(currentIndex, savedStates.get(currentSaveIndex));
+        if(currentStateIndex >0){
+            currentStateIndex--;
+            this.frames.remove(currentFrameIndex);
+            this.frames.add(currentFrameIndex, savedStates.get(currentStateIndex));
             repaint();
 
         }
     }
 
     private void restoreNextState(){
-        if(currentSaveIndex<savedStates.size()-1){
-            currentSaveIndex++;
-            this.pixelsRgba.remove(currentIndex);
-            this.pixelsRgba.add(currentIndex, savedStates.get(currentSaveIndex));
+        if(currentStateIndex <savedStates.size()-1){
+            currentStateIndex++;
+            this.frames.remove(currentFrameIndex);
+            this.frames.add(currentFrameIndex, savedStates.get(currentStateIndex));
             repaint();
         }
     }
 
     private void saveBeforeModification(){
-        while(savedStates.size()>currentSaveIndex){
+        while(savedStates.size()> currentStateIndex){
             savedStates.remove(savedStates.size()-1);
         }
-        savedStates.add(getCurrentPixels().clone());
-        this.currentSaveIndex = savedStates.size();
+        savedStates.add(getCurrentFrame().clone());
+        this.currentStateIndex = savedStates.size();
     }
 
     private static int[][] copyArray(int[][] src){
@@ -259,27 +288,31 @@ public class Pixelizer extends JFrame {
         return ret;
     }
 
-    private void createMenuBar() {
-        this.menuBar = new JMenuBar();
+    private JMenuBar getAppMenuBar() {
+        if(this.appMenuBar ==null){
+            this.appMenuBar = new JMenuBar();
 
-        JMenu menuOpen = new JMenu("File");
-        JMenuItem openMenu = new JMenuItem("Open...");
-        openMenu.setActionCommand("open");
-        InternalActionListener actionListener = new InternalActionListener(this);
-        openMenu.addActionListener(actionListener);
-        menuOpen.add(openMenu);
-        JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
-        saveMenuAsPng.setActionCommand("save_as_PNG");
-        saveMenuAsPng.addActionListener(actionListener);
-        menuOpen.add(saveMenuAsPng);
-        this.menuBar.add(menuOpen);
+            JMenu menuOpen = new JMenu("File");
+            JMenuItem openMenu = new JMenuItem("Open...");
+            openMenu.setActionCommand(ACTION_OPEN);
+            InternalActionListener actionListener = new InternalActionListener(this);
+            openMenu.addActionListener(actionListener);
+            menuOpen.add(openMenu);
+            JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
+            saveMenuAsPng.setActionCommand(ACTION_SAVE_AS_PNG);
+            saveMenuAsPng.addActionListener(actionListener);
+            menuOpen.add(saveMenuAsPng);
+            this.appMenuBar.add(menuOpen);
 
-        JMenu menuEdit = new JMenu("Edit");
-        JMenuItem clearChangesMenu = new JMenuItem("Clear changes");
-        clearChangesMenu.setActionCommand("clear");
-        clearChangesMenu.addActionListener(actionListener);
-        menuEdit.add(clearChangesMenu);
-        menuBar.add(menuEdit);
+            JMenu menuEdit = new JMenu("Edit");
+            JMenuItem clearChangesMenu = new JMenuItem("Clear changes");
+            clearChangesMenu.setActionCommand(ACTION_CLEAR);
+            clearChangesMenu.addActionListener(actionListener);
+            menuEdit.add(clearChangesMenu);
+            appMenuBar.add(menuEdit);
+        }
+
+        return appMenuBar;
     }
 
 
@@ -304,25 +337,24 @@ public class Pixelizer extends JFrame {
 		public void mouseReleased(MouseEvent e) {
 			if (isMouseIn && isMousePressed) {
 				this.isMousePressed = false;
-				switch (e.getButton()) {
-				default:
-				case MouseEvent.BUTTON1:
-					updatePaint(e.getX(), e.getY());
-					break;
-				case MouseEvent.BUTTON3:
-					int[] xy = findPixelIndices(e.getX(), e.getY());
-					this.parent.updateColorChooser(xy[0], xy[1]);
-					break;
-				}
+                doMouse(e);
 			}
 		}
 
-		private void updatePaint(int x, int y) {
-			int[] xy = findPixelIndices(x, y);
-			this.parent.applyToolOnPixel(xy[0], xy[1]);
-		}
+        private void doMouse(MouseEvent e) {
+            int[] xy = findPixelIndices(e.getX(), e.getY());
+            switch (e.getButton()) {
+                default:
+                case MouseEvent.BUTTON1:
+                    this.parent.applyFirstActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+                    break;
+                case MouseEvent.BUTTON3:
+                    this.parent.applySecondActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+                    break;
+            }
+        }
 
-		@Override
+        @Override
 		public void mouseEntered(MouseEvent e) {
 			this.isMouseIn = true;
 		}
@@ -340,17 +372,27 @@ public class Pixelizer extends JFrame {
 		@Override
 		public void mouseDragged(MouseEvent e) {
 			if (isMouseIn && isMousePressed) {
-				updatePaint(e.getX(), e.getY());
+				doMouse(e);
 			}
 		}
 
 		private int[] findPixelIndices(int x, int y) {
-			return new int[] { (int) (x / (PIXEL_SIZE + MARGIN)),
-					(int) (y / (PIXEL_SIZE + MARGIN)) };
+			return new int[] {x / (PIXEL_SIZE + MARGIN),
+                    y / (PIXEL_SIZE + MARGIN)};
 		}
 	}
 
-	private class InternalActionListener implements ActionListener {
+    private void applySecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+        switch(toolSelected){
+            case PEN:
+                updateColorChooser(x, y);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private class InternalActionListener implements ActionListener {
 		private Pixelizer parent;
 
 		InternalActionListener(Pixelizer parent) {
@@ -359,11 +401,11 @@ public class Pixelizer extends JFrame {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			if (e.getActionCommand().equals("open")) {
+			if (e.getActionCommand().equals(ACTION_OPEN)) {
 				this.parent.actionOpenFile();
-			} else if (e.getActionCommand().equals("save_as_PNG")) {
+			} else if (e.getActionCommand().equals(ACTION_SAVE_AS_PNG)) {
                 this.parent.actionSaveAsPNG();
-			} else if (e.getActionCommand().equals("clear")) {
+			} else if (e.getActionCommand().equals(ACTION_CLEAR)) {
 				this.parent.actionClearChange();
 			}
 		}
@@ -382,15 +424,26 @@ public class Pixelizer extends JFrame {
 		public void setImage(File imageFile) {
 			try {
 				image = ImageIO.read(imageFile);
-                if(image.getHeight()>PIXEL_SIZE || image.getWidth()%PIXEL_SIZE!=0){
-                    int ret = JOptionPane.showConfirmDialog(this, "Image seems not a pixel image (height > " + PIXEL_SIZE + "px). Would you like to convert it to pixel?");
+                if(image.getHeight()>NB_PIXELS || image.getWidth()%NB_PIXELS!=0){
+                    int ret = JOptionPane.showConfirmDialog(this, "Image seems not a pixel image (height > " + NB_PIXELS+ "px or length not a multiple of "+NB_PIXELS+"). Would you like to convert it to pixel?");
                     if(ret == JOptionPane.OK_OPTION){
                         this.parent.convertCurentImageToPixels();
-                        repaint();
                     }
                 } else {
-
+                    int nb = image.getHeight()/NB_PIXELS;
+                    this.parent.frames = new ArrayList<>(nb);
+                    this.parent.currentFrameIndex =0;
+                    for(int c=0; c<nb; c++){
+                        Frame p = new Frame();
+                        this.parent.frames.add(p);
+                        for (int h = 0; h < NB_PIXELS; h++) {
+                            for (int v = 0; v < NB_PIXELS; v++) {
+                                p.setColor(h, v,  image.getRGB(h+c*NB_PIXELS, v));
+                            }
+                        }
+                    }
                 }
+                repaint();
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			}
@@ -410,7 +463,8 @@ public class Pixelizer extends JFrame {
                 g2d.setPaint(Color.black);
                 g2d.fillRect((i + 1) * (PIXEL_SIZE + MARGIN), 0, MARGIN, h);
                 for (int j = 0; j < NB_PIXELS; j++) {
-                    g2d.setPaint(Color.GRAY);
+                    int c = getCurrentFrame().getColor(i, j);
+                    g2d.setPaint(Utils.overlayWithColor(Color.GRAY, c));
                     g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
                             + j * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
                             PIXEL_SIZE / 2);
@@ -418,7 +472,7 @@ public class Pixelizer extends JFrame {
                             + PIXEL_SIZE / 2, MARGIN + j
                             * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
                             PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-                    g2d.setPaint(Color.LIGHT_GRAY);
+                    g2d.setPaint(Utils.overlayWithColor(Color.LIGHT_GRAY, c));
                     g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
                             + PIXEL_SIZE / 2, MARGIN + j
                             * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
@@ -434,45 +488,29 @@ public class Pixelizer extends JFrame {
             g2d.setPaint(Color.black);
             g2d.fillRect(0, 0, w, MARGIN);
             g2d.fillRect(0, 0, MARGIN, h);
-            for (int i = 0; i < NB_PIXELS; i++) {
-                for (int j = 0; j < NB_PIXELS; j++) {
-                    //int c = 0xffffffff;
-                    int c = getCurrentPixels().getColor(i, j);
-                    if (c != 0xffffffff) {
-                        g2d.setPaint(new Color(c));
-                        g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN),
-                                MARGIN + j * (PIXEL_SIZE + MARGIN),
-                                PIXEL_SIZE, PIXEL_SIZE);
-                    }
-                }
-            }
 			g2d.dispose();
 			Toolkit.getDefaultToolkit().sync();
 		}
-	}
+
+    }
 
 	public void updateColorChooser(int i, int j) {
-		updateColorChooser(i, j, getCurrentPixels().getColor(i, j));
+		updateColorChooser(i, j, getCurrentFrame().getColor(i, j));
 	}
 
 	public void updateColorChooser(int i, int j, int p) {
-		int r = (p & 0x00ff0000) >> 16;
-		int g = (p & 0x0000ff00) >> 8;
-		int b = p & 0x000000ff;
-		if (p == 0x00000000)
-			this.colorChooser.setColor(null);
-		else
-			this.colorChooser.setColor(new Color(r, g, b));
+        int[] argb = Utils.extractARGB(p);
+	    this.colorChooser.setColor(new Color(argb[1], argb[2], argb[3], argb[0]));
 	}
 
-	public void applyToolOnPixel(int x, int y) {
+	public void applyFirstActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
         if (NB_PIXELS > x && NB_PIXELS > y) {
             switch(toolSelected){
                 case PEN:
                     applyColor(x, y, this.colorChooser.getColor());
                     break;
                 case CLEAR:
-                    applyColor(x, y, new Color(0xffffffff));
+                    applyColor(x, y, NO_COLOR);
                     break;
                 default:
                     break;
@@ -481,23 +519,16 @@ public class Pixelizer extends JFrame {
     }
 
     public void applyColor(int x, int y, Color c){
-        int px = 0xffffffff;
-        if (c != null) {
-            px = 0x00000000;
-            px += c.getAlpha() << 24 & 0xff000000;
-            px += c.getRed() << 16 & 0x00ff0000;
-            px += c.getGreen() << 8 & 0x0000ff00;
-            px += c.getBlue() & 0x000000ff;
-        }
-        if(getCurrentPixels().getColor(x, y)!=px){
+        int p = Utils.convertToColorAsInt(c);
+        if(getCurrentFrame().getColor(x, y)!=p){
             saveBeforeModification();
-            getCurrentPixels().setColor(x, y, px);
+            getCurrentFrame().setColor(x, y, p);
             this.imagePanel.repaint();
         }
 	}
 
-    private Pixels getCurrentPixels() {
-        return pixelsRgba.get(currentIndex);
+    private Frame getCurrentFrame() {
+        return frames.get(currentFrameIndex);
     }
 
     public void convertCurentImageToPixels() {
@@ -513,45 +544,37 @@ public class Pixelizer extends JFrame {
 			for (int h = 0; h < NB_PIXELS; h++) {
 				for (int v = 0; v < NB_PIXELS; v++) {
 					int count = 0;
-                    long sumA = 0;
-					long sumR = 0;
-					long sumG = 0;
-					long sumB = 0;
+                    long sumA=0, sumR=0, sumG=0, sumB=0;
 					for (int x = h * nbImgPixelPerHPixel; x < (h + 1)
 							* nbImgPixelPerHPixel; x++) {
 						for (int y = v * nbImgPixelPerVPixel; y < (v + 1)
 								* nbImgPixelPerVPixel; y++) {
-							int p = image.getRGB(x, y);
-                            int a = (p & 0xff000000) >> 24;
-                            sumA += a;
-							int r = (p & 0x00ff0000) >> 16;
-							sumR += r;
-							int g = (p & 0x0000ff00) >> 8;
-							sumG += g;
-							int b = p & 0x000000ff;
-							sumB += b;
+ 							int p = image.getRGB(x, y);
+                            int[] argb = Utils.extractARGB(p);
+                            sumA += argb[0];
+							sumR += argb[1];
+							sumG += argb[2];
+							sumB += argb[3];
 							count++;
 						}
 					}
-                    int c = 0x00000000;
-					if (count != 0) {
-                        c += (sumA / count << 24) & 0xff000000;
-                        c += (sumR / count << 16) & 0x00ff0000;
-                        c += (sumG / count << 8) & 0x0000ff00;
-                        c += (sumB / count) & 0x000000ff;
-					}
-                    getCurrentPixels().setColor(h, v, c);
+                    int c = Utils.convertToColorAsInt(
+                            (int)(sumA / count),
+                            (int)(sumR / count),
+                            (int)(sumG / count),
+                            (int)(sumB / count));
+                    getCurrentFrame().setColor(h, v, c);
 				}
 			}
 		}
 	}
 
     public void reset(){
-        getCurrentPixels().reset();
+        getCurrentFrame().reset();
     }
 
     private void setCurrentPixel(int i, int j, int color){
-        getCurrentPixels().setColor(i, j, color);
+        getCurrentFrame().setColor(i, j, color);
     }
 
 	public void actionClearChange() {
@@ -565,12 +588,11 @@ public class Pixelizer extends JFrame {
 	}
 
 	public void actionOpenFile() {
-		JFileChooser fc = new JFileChooser("e:");
+		JFileChooser fc = new JFileChooser();
 		int ret = fc.showOpenDialog(this);
 		if (ret == JFileChooser.APPROVE_OPTION) {
-			showImage(fc.getSelectedFile());
+            this.imagePanel.setImage(fc.getSelectedFile());
 		}
-
 	}
 
     public void actionSaveAsPNG(){
@@ -579,11 +601,11 @@ public class Pixelizer extends JFrame {
         if(fileChooser.showDialog(this, "Save")==JFileChooser.APPROVE_OPTION){
             File f = fileChooser.getSelectedFile();
             try {
-                BufferedImage bImg = new BufferedImage(NB_PIXELS, NB_PIXELS*this.pixelsRgba.size(), BufferedImage.TYPE_INT_ARGB_PRE);
-                for (int c = 0; c < pixelsRgba.size(); c++) {
+                BufferedImage bImg = new BufferedImage(NB_PIXELS, NB_PIXELS*this.frames.size(), BufferedImage.TYPE_INT_ARGB);
+                for (int c = 0; c < frames.size(); c++) {
                     for (int i = 0; i < NB_PIXELS; i++) {
                         for (int j = 0; j < NB_PIXELS; j++) {
-                            bImg.setRGB(i, j, toARGB(pixelsRgba.get(c).getColor(i, j)));
+                            bImg.setRGB(i, j, frames.get(c).getColor(i, j));
                         }
                     }
                 }
@@ -598,45 +620,11 @@ public class Pixelizer extends JFrame {
         }
     }
 
-    private int toARGB(int rgba) {
-        String ret = Integer.toHexString(rgba).toUpperCase();
-        if(ret.length()<=6){
-            return rgba | 0xff000000;
-        } else {
-            return Integer.parseInt(ret.substring(6)+ret.substring(0, 5), 16);
-        }
-    }
-
-
-	private String toHex(Integer i) {
-		String ret = Integer.toHexString(i);
-		if (ret.length() == 6) {
-			ret = "0x00" + ret;
-		} else {
-			ret = "0x" + ret;
-		}
-		return ret;
-	}
-
-	private void showImage(File selectedFile) {
-		this.imagePanel.setImage(selectedFile);
-	}
-
-    private class InternalKeyListener implements KeyListener {
+    private class InternalKeyListener extends KeyAdapter{
         private final Pixelizer parent;
 
         public InternalKeyListener(Pixelizer parent) {
             this.parent = parent;
-        }
-
-        @Override
-        public void keyTyped(KeyEvent e) {
-
-        }
-
-        @Override
-        public void keyPressed(KeyEvent e) {
-
         }
 
         @Override
