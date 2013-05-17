@@ -1,6 +1,7 @@
 package io.gameover.utilities.pixeleditor;
 
 import javax.swing.*;
+import java.awt.Dimension;
 
 /**
 * Created with IntelliJ IDEA.
@@ -10,12 +11,18 @@ import javax.swing.*;
 * To change this template use File | Settings | File Templates.
 */
 public enum Tool {
-    PEN("P"), SELECT("S"), FILL("F"), CLEAR("X"), MAGIC_WAND("W"), MOVE("M");
+    PEN("/img/pencil.png"),
+    FILL("/img/paintcan.png"),
+    CLEAR("/img/cross.png"),
+    SELECT("/img/shape_square_edit.png"),
+    MAGIC_WAND("/img/wand.png"),
+    MOVE("/img/shape_handles.png");
 
     private JToggleButton button;
 
-    Tool(String label) {
-        button = new JToggleButton(label);
+    Tool(String imgIcon) {
+        button = new JToggleButton(new ImageIcon(getClass().getResource(imgIcon)));
+        button.setPreferredSize(new Dimension(20,20));
         button.setActionCommand(name());
     }
 

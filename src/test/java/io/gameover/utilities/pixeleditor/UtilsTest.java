@@ -41,4 +41,19 @@ public class UtilsTest {
         Assert.assertEquals(255, argb[2]);
         Assert.assertEquals(255, argb[3]);
     }
+
+    @Test
+    public void testConvert(){
+        int[] argb = Utils.extractARGB(16777215);
+        for(int i=0;i<argb.length;i++){
+            System.out.print(argb[i]+",");
+        }
+        System.out.println();
+
+        argb = Utils.extractARGB(0);
+        for(int i=0;i<argb.length;i++){
+            System.out.print(argb[i]+",");
+        }
+        System.out.println();
+    }
 }

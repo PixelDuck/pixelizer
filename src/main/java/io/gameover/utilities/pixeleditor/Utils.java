@@ -37,7 +37,7 @@ public final class Utils {
     }
 
     public static int convertToColorAsInt(Color color){
-        return convertToColorAsInt(color.getAlpha(), color.getRed(), color.getGreen(), color.getBlue());
+        return convertToColorAsInt(255-color.getAlpha(), color.getRed(), color.getGreen(), color.getBlue());
     }
 
     public static int[] extractRGB(int c){
@@ -58,7 +58,7 @@ public final class Utils {
                 (int) (original.getRed()*(1.0d-alpha)+argb[1]*alpha),
                 (int) (original.getGreen()*(1.0d-alpha)+argb[2]*alpha),
                 (int) (original.getBlue()*(1.0d-alpha)+argb[3]*alpha));
-        System.out.println(c+"+"+original+"=>"+ret+" (alpha="+alpha+")");
+        //System.out.println(c+"+"+original+"=>"+ret+" (alpha="+alpha+")");
         return ret;
     }
 }
