@@ -4,11 +4,8 @@ import java.awt.Color;
 import java.awt.Paint;
 
 /**
- * Created with IntelliJ IDEA.
- * User: MRS.OMARTIN
- * Date: 16/05/13
- * Time: 07:47
- * To change this template use File | Settings | File Templates.
+ * TODO: pb selection couleur + alpha
+ * TODO: fill
  */
 public final class Utils {
     private Utils(){}
@@ -24,7 +21,7 @@ public final class Utils {
     }
 
     public static int convertToColorAsInt(int ... argb){
-        int c = 0x00000000;
+        int c = 0xff000000;
         int rgbFirstIndex = 0;
         if(argb.length==4){
             rgbFirstIndex = 1;
@@ -37,7 +34,7 @@ public final class Utils {
     }
 
     public static int convertToColorAsInt(Color color){
-        return convertToColorAsInt(255-color.getAlpha(), color.getRed(), color.getGreen(), color.getBlue());
+        return convertToColorAsInt(color.getAlpha(), color.getRed(), color.getGreen(), color.getBlue());
     }
 
     public static int[] extractRGB(int c){
@@ -52,13 +49,18 @@ public final class Utils {
     }
 
     public static Paint overlayWithColor(Color original, int c) {
+        int[] rgb = overlayWithColor(convertToColorAsInt(original), c);
+        return new Color(rgb[0], rgb[1], rgb[2]);
+    }
+
+    public static int[] overlayWithColor(int original, int c) {
+        int[] rgb = Utils.extractRGB(original);
         int[] argb = Utils.extractARGB(c);
         double alpha = computeAlphaMultiplicator(argb[0]);
-        Color ret = new Color(
-                (int) (original.getRed()*(1.0d-alpha)+argb[1]*alpha),
-                (int) (original.getGreen()*(1.0d-alpha)+argb[2]*alpha),
-                (int) (original.getBlue()*(1.0d-alpha)+argb[3]*alpha));
-        //System.out.println(c+"+"+original+"=>"+ret+" (alpha="+alpha+")");
-        return ret;
+        return new int[]{
+                (int) (rgb[0]*(1.0d-alpha)+argb[1]*alpha),
+                (int) (rgb[1]*(1.0d-alpha)+argb[2]*alpha),
+                (int) (rgb[2]*(1.0d-alpha)+argb[3]*alpha)
+        };
     }
 }

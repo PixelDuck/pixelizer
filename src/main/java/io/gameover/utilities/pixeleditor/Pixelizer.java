@@ -627,6 +627,7 @@ public class Pixelizer extends JFrame {
     private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
         switch(toolSelected){
             case PEN:
+            case FILL:
                 updateColorChooser(x, y);
                 break;
             default:
@@ -694,14 +695,13 @@ public class Pixelizer extends JFrame {
             for (int i = 0; i < NB_PIXELS; i++) {
                 for (int j = 0; j < NB_PIXELS; j++) {
                     int c = frame.getColor(i, j);
-                    if(i==j && i==0){
-                        System.out.println("c=" + c);
-                    }
                     if(c!=NO_COLOR_AS_INT){
-                        image.setRGB(i*2 + 20, j*2 + 20, c);
-                        image.setRGB(i*2+1 + 20, j*2 + 20, c);
-                        image.setRGB(i*2+1 + 20, j*2+1 + 20, c);
-                        image.setRGB(i*2 + 20, j*2+1 + 20, c);
+                        int[] rgb = Utils.overlayWithColor(image.getRGB(i*2 + 20, j*2 + 20), c);
+                        int irgb = Utils.convertToColorAsInt(rgb);
+                        image.setRGB(i*2 + 20, j*2 + 20, irgb);
+                        image.setRGB(i*2+1 + 20, j*2 + 20, irgb);
+                        image.setRGB(i*2+1 + 20, j*2+1 + 20, irgb);
+                        image.setRGB(i*2 + 20, j*2+1 + 20, irgb);
                     }
                 }
             }
