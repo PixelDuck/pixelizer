@@ -14,17 +14,17 @@ public class UtilsTest {
 
     @Test
     public void testExtractRGB(){
-        int[] argb = Utils.extractRGB(0x00FF0000);
+        int[] argb = ColorUtils.extractRGB(0x00FF0000);
         Assert.assertEquals(255, argb[0]);
         Assert.assertEquals(0, argb[1]);
         Assert.assertEquals(0, argb[2]);
 
-        argb = Utils.extractRGB(0x0000FF00);
+        argb = ColorUtils.extractRGB(0x0000FF00);
         Assert.assertEquals(0, argb[0]);
         Assert.assertEquals(255, argb[1]);
         Assert.assertEquals(0, argb[2]);
 
-        argb = Utils.extractRGB(0x000000FF);
+        argb = ColorUtils.extractRGB(0x000000FF);
         Assert.assertEquals(0, argb[0]);
         Assert.assertEquals(0, argb[1]);
         Assert.assertEquals(255, argb[2]);
@@ -35,7 +35,7 @@ public class UtilsTest {
     @Test
     public void testExtractARGB(){
         System.out.println("0xFFFFFFFF:"+0xffffffff);
-        int[] argb = Utils.extractARGB(0xffffffff);
+        int[] argb = ColorUtils.extractARGB(0xffffffff);
         Assert.assertEquals(255, argb[0]);
         Assert.assertEquals(255, argb[1]);
         Assert.assertEquals(255, argb[2]);
@@ -44,13 +44,13 @@ public class UtilsTest {
 
     @Test
     public void testConvert(){
-        int[] argb = Utils.extractARGB(16777215);
+        int[] argb = ColorUtils.extractARGB(16777215);
         for(int i=0;i<argb.length;i++){
             System.out.print(argb[i]+",");
         }
         System.out.println();
 
-        argb = Utils.extractARGB(0);
+        argb = ColorUtils.extractARGB(0);
         for(int i=0;i<argb.length;i++){
             System.out.print(argb[i]+",");
         }

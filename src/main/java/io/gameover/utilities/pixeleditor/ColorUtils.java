@@ -4,11 +4,10 @@ import java.awt.Color;
 import java.awt.Paint;
 
 /**
- * TODO: pb selection couleur + alpha
- * TODO: fill
+ * Utilities class for all color convertions.
  */
-public final class Utils {
-    private Utils(){}
+public final class ColorUtils {
+    private ColorUtils(){}
 
 
     public static int[] extractARGB(int c){
@@ -54,8 +53,8 @@ public final class Utils {
     }
 
     public static int[] overlayWithColor(int original, int c) {
-        int[] rgb = Utils.extractRGB(original);
-        int[] argb = Utils.extractARGB(c);
+        int[] rgb = ColorUtils.extractRGB(original);
+        int[] argb = ColorUtils.extractARGB(c);
         double alpha = computeAlphaMultiplicator(argb[0]);
         return new int[]{
                 (int) (rgb[0]*(1.0d-alpha)+argb[1]*alpha),

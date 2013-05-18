@@ -12,6 +12,8 @@
 
 package io.gameover.utilities.pixeleditor;
 
+import oracle.jrockit.jfr.settings.JSONElement;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -173,6 +175,22 @@ public class Pixelizer extends JFrame {
         return toleranceBar;
     }
 
+    public int getNbPixels() {
+        return NB_PIXELS;
+    }
+
+    public int getPixelSize() {
+        return PIXEL_SIZE;
+    }
+
+    public int getMargin() {
+        return MARGIN;
+    }
+
+    public List<Frame> getPixelFrames() {
+        return frames;
+    }
+
     public static class SelectFrameActionListener implements ActionListener{
         private Pixelizer parent;
         public SelectFrameActionListener(Pixelizer parent){
@@ -295,8 +313,8 @@ public class Pixelizer extends JFrame {
 
         private boolean isColorClosed(int color1, int color2, int tolerance) {
             int t = 256*tolerance/100;
-            int[] argb1 = Utils.extractARGB(color1);
-            int[] argb2 = Utils.extractARGB(color2);
+            int[] argb1 = ColorUtils.extractARGB(color1);
+            int[] argb2 = ColorUtils.extractARGB(color2);
             boolean ok = true;
             for(int i=0; i<4;i++){
                 ok &= ((argb1[i]-t) < argb2[i] && argb2[i]< (argb1[i]+t));
@@ -558,11 +576,11 @@ public class Pixelizer extends JFrame {
     }
 
 
-	private int getImageWidth() {
+	public int getImageWidth() {
 		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
 	}
 
-	private int getImageHeight() {
+	public int getImageHeight() {
 		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
 	}
 
@@ -654,125 +672,12 @@ public class Pixelizer extends JFrame {
 		}
 	}
 
-    public class AnimationImagePanel extends JPanel{
-        private final int fps;
-        private final Pixelizer parent;
-        private BufferedImage image = new BufferedImage(40+NB_PIXELS*2, 40+NB_PIXELS*2, BufferedImage.TYPE_INT_ARGB);
-        private Timer timer;
-        private int index;
-        public AnimationImagePanel (final Pixelizer parent, int fps) {
-            setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
-            this.parent = parent;
-            this.fps = fps;
-            timer = new Timer(1000/fps, new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    index++;
-                    if(index>=parent.frames.size())
-                        index = 0;
-                    repaint();
-                }
-            });
-            timer.start();
-        }
-
-        public void paint(Graphics g) {
-            super.paint(g);
-
-            Graphics2D g2d = (Graphics2D) g;
-
-            Frame frame = this.parent.frames.get(index);
-
-            Graphics2D gi2d = (Graphics2D) image.getGraphics();
-            for(int i=0; i<image.getWidth()/4+1; i++){
-                for(int j=0; j<image.getHeight()/4+1; j++){
-                    Color c = i%2==j%2?Color.GRAY:Color.lightGray;
-                    gi2d.setColor(c);
-                    gi2d.fillRect(i*4, j*4, 4, 4);
-                }
-            }
-            gi2d.dispose();
-            for (int i = 0; i < NB_PIXELS; i++) {
-                for (int j = 0; j < NB_PIXELS; j++) {
-                    int c = frame.getColor(i, j);
-                    if(c!=NO_COLOR_AS_INT){
-                        int[] rgb = Utils.overlayWithColor(image.getRGB(i*2 + 20, j*2 + 20), c);
-                        int irgb = Utils.convertToColorAsInt(rgb);
-                        image.setRGB(i*2 + 20, j*2 + 20, irgb);
-                        image.setRGB(i*2+1 + 20, j*2 + 20, irgb);
-                        image.setRGB(i*2+1 + 20, j*2+1 + 20, irgb);
-                        image.setRGB(i*2 + 20, j*2+1 + 20, irgb);
-                    }
-                }
-            }
-            g2d.drawImage(image, 0, 0, null);
-            g2d.dispose();
-            Toolkit.getDefaultToolkit().sync();
-        }
-    }
-
-	public class ImagePanel extends JPanel {
-
-		private Pixelizer parent;
-
-		public ImagePanel(Pixelizer parent) {
-			this.parent = parent;
-			setDoubleBuffered(true);
-            setSize(this.parent.getImageWidth(), this.parent.getImageHeight());
-		}
-
-        protected Frame getFrame(){
-            return getCurrentFrame();
-        }
-
-		public void paint(Graphics g) {
-			super.paint(g);
-
-			Graphics2D g2d = (Graphics2D) g;
-			int w = this.parent.getImageWidth();
-			int h = this.parent.getImageHeight();
-
-            for (int i = 0; i < NB_PIXELS; i++) {
-                g2d.setPaint(Color.black);
-                g2d.fillRect((i + 1) * (PIXEL_SIZE + MARGIN), 0, MARGIN, h);
-                for (int j = 0; j < NB_PIXELS; j++) {
-                    int c = getFrame().getColor(i, j);
-                    g2d.setPaint(Utils.overlayWithColor(Color.GRAY, c));
-                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
-                            + j * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
-                            PIXEL_SIZE / 2);
-                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
-                            + PIXEL_SIZE / 2, MARGIN + j
-                            * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
-                            PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-                    g2d.setPaint(Utils.overlayWithColor(Color.LIGHT_GRAY, c));
-                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN)
-                            + PIXEL_SIZE / 2, MARGIN + j
-                            * (PIXEL_SIZE + MARGIN), PIXEL_SIZE / 2,
-                            PIXEL_SIZE / 2);
-                    g2d.fillRect(MARGIN + i * (PIXEL_SIZE + MARGIN), MARGIN
-                            + j * (PIXEL_SIZE + MARGIN) + PIXEL_SIZE / 2,
-                            PIXEL_SIZE / 2, PIXEL_SIZE / 2);
-                    g2d.setPaint(Color.black);
-                    g2d.fillRect(0, (j + 1) * (PIXEL_SIZE + MARGIN), w,
-                            MARGIN);
-                }
-            }
-            g2d.setPaint(Color.black);
-            g2d.fillRect(0, 0, w, MARGIN);
-            g2d.fillRect(0, 0, MARGIN, h);
-			g2d.dispose();
-			Toolkit.getDefaultToolkit().sync();
-		}
-
-    }
-
 	public void updateColorChooser(int i, int j) {
 		updateColorChooser(i, j, getCurrentFrame().getColor(i, j));
 	}
 
 	public void updateColorChooser(int i, int j, int p) {
-        int[] argb = Utils.extractARGB(p);
+        int[] argb = ColorUtils.extractARGB(p);
 	    this.colorChooser.setColor(new Color(argb[1], argb[2], argb[3], argb[0]));
 	}
 
@@ -795,7 +700,7 @@ public class Pixelizer extends JFrame {
     }
 
     public void applyColor(int x, int y, Color c){
-        applyColor(x, y, Utils.convertToColorAsInt(c));
+        applyColor(x, y, ColorUtils.convertToColorAsInt(c));
 	}
 
     public void applyColor(int x, int y, int c){
@@ -807,7 +712,7 @@ public class Pixelizer extends JFrame {
     }
 
     public void fillColor(int x, int y, Color c){
-        int p = Utils.convertToColorAsInt(c);
+        int p = ColorUtils.convertToColorAsInt(c);
         if(getCurrentFrame().getColor(x, y)!=p){
             saveBeforeModification();
             getCurrentFrame().fillColor(x, y, p, getToleranceBar().getValue());
@@ -815,7 +720,7 @@ public class Pixelizer extends JFrame {
         }
     }
 
-    private Frame getCurrentFrame() {
+    public Frame getCurrentFrame() {
         if(currentFrameIndex>=0 && currentFrameIndex<frames.size()){
             return frames.get(currentFrameIndex);
         } else
@@ -836,7 +741,7 @@ public class Pixelizer extends JFrame {
 						for (int y = v * nbImgPixelPerVPixel; y < (v + 1)
 								* nbImgPixelPerVPixel; y++) {
  							int p = image.getRGB(x, y);
-                            int[] argb = Utils.extractARGB(p);
+                            int[] argb = ColorUtils.extractARGB(p);
                             sumA += argb[0];
 							sumR += argb[1];
 							sumG += argb[2];
@@ -844,11 +749,11 @@ public class Pixelizer extends JFrame {
 							count++;
 						}
 					}
-                    int c = Utils.convertToColorAsInt(
-                            (int)(sumA / count),
-                            (int)(sumR / count),
-                            (int)(sumG / count),
-                            (int)(sumB / count));
+                    int c = ColorUtils.convertToColorAsInt(
+                            (int) (sumA / count),
+                            (int) (sumR / count),
+                            (int) (sumG / count),
+                            (int) (sumB / count));
                     getCurrentFrame().setColor(h, v, c);
 				}
 			}
