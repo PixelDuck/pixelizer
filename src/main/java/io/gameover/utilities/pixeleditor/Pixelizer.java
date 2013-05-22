@@ -20,7 +20,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -80,6 +82,8 @@ public class Pixelizer extends JFrame {
      * Constructor.
      */
     public Pixelizer() {
+        setFocusable(true);
+        requestFocus();
         frames = new ArrayList<>();
         frames.add(new Frame());
         currentFrameIndex = 0;
@@ -87,7 +91,6 @@ public class Pixelizer extends JFrame {
         reset();
         applyLookAndFeel();
         setTitle("Pixelizer");
-        addKeyListener(new InternalKeyListener(this));
 
         savedStates = new ArrayList<>();
         currentStateIndex = 0;
@@ -98,6 +101,7 @@ public class Pixelizer extends JFrame {
 
         initPanels();
 
+        addKeyListener(new InternalKeyListener(this));
         setSize(new Dimension(800, 700));
         centerFrame();
         setVisible(true);
@@ -252,60 +256,25 @@ public class Pixelizer extends JFrame {
             }
         }
 
-        private List<Point> findPoint(int x, int y, int color, int tolerance) {
+        public List<Point> findPoint(int x, int y, int color, int tolerance) {
+            Set<Point> scanned = new HashSet<>();
             List<Point> ret = new ArrayList<>();
-            findPointAux(x, y, color, tolerance, ret, 5);
+            findPointAux(x, y, color, tolerance, ret, scanned);
             return ret;
         }
 
-        private void findPointAux(int x, int y, int color, int tolerance, List<Point> ret, int position) {
-            if(x>=0 && x<argb.length
-                    && y>=0 && y<argb[0].length
-                    && isColorClosed(getColor(x,y), color, tolerance)){
-                ret.add(new Point(x, y));
-                switch(position) {
-                    case 1:
-                        findPointAux(x-1, y-1, color, tolerance, ret, 1);
-                        findPointAux(x, y-1, color, tolerance, ret, 2);
-                        findPointAux(x-1, y, color, tolerance, ret, 4);
-                        break;
-                    case 2:
-                        findPointAux(x, y-1, color, tolerance, ret, 2);
-                        break;
-                    case 3:
-                        findPointAux(x+1, y-1, color, tolerance, ret, 3);
-                        findPointAux(x, y-1, color, tolerance, ret, 2);
-                        findPointAux(x+1, y, color, tolerance, ret, 6);
-                        break;
-                    case 4:
-                        findPointAux(x-1, y, color, tolerance, ret, 4);
-                        break;
-                    case 5:
-                        findPointAux(x-1, y-1, color, tolerance, ret, 1);
-                        findPointAux(x, y-1, color, tolerance, ret, 2);
-                        findPointAux(x+1, y-1, color, tolerance, ret, 3);
-                        findPointAux(x-1, y, color, tolerance, ret, 4);
-                        findPointAux(x+1, y, color, tolerance, ret, 6);
-                        findPointAux(x-1, y+1, color, tolerance, ret, 7);
-                        findPointAux(x, y+1, color, tolerance, ret, 8);
-                        findPointAux(x+1, y+1, color, tolerance, ret, 9);
-                        break;
-                    case 6:
-                        findPointAux(x+1, y, color, tolerance, ret, 6);
-                        break;
-                    case 7:
-                        findPointAux(x-1, y, color, tolerance, ret, 4);
-                        findPointAux(x-1, y+1, color, tolerance, ret, 7);
-                        findPointAux(x, y+1, color, tolerance, ret, 8);
-                        break;
-                    case 8:
-                        findPointAux(x, y+1, color, tolerance, ret, 8);
-                        break;
-                    case 9:
-                        findPointAux(x+1, y, color, tolerance, ret, 6);
-                        findPointAux(x, y+1, color, tolerance, ret, 8);
-                        findPointAux(x+1, y+1, color, tolerance, ret, 9);
-                        break;
+        private void findPointAux(int x, int y, int color, int tolerance, List<Point> ret, Set<Point> scanned) {
+            Point p = new Point(x, y);
+            if(!scanned.contains(p)){
+                scanned.add(p);
+                if(x>=0 && x<argb.length
+                        && y>=0 && y<argb[0].length
+                        && isColorClosed(getColor(x,y), color, tolerance)){
+                    ret.add(p);
+                    findPointAux(x-1, y, color, tolerance, ret, scanned);
+                    findPointAux(x+1, y, color, tolerance, ret, scanned);
+                    findPointAux(x, y-1, color, tolerance, ret, scanned);
+                    findPointAux(x, y+1, color, tolerance, ret, scanned);
                 }
             }
         }
@@ -584,12 +553,15 @@ public class Pixelizer extends JFrame {
 
         private void doMouse(MouseEvent e) {
             int[] xy = findPixelIndices(e.getX(), e.getY());
+            boolean shiftPressed = (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0;
+            boolean ctrlPressed = (e.getModifiers() & KeyEvent.CTRL_MASK) != 0;
+            boolean altPressed = (e.getModifiers() & KeyEvent.ALT_MASK) != 0;
             if(SwingUtilities.isLeftMouseButton(e)){
-                this.parent.doFirstActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+                this.parent.doFirstActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
             } else if(SwingUtilities.isRightMouseButton(e)){
-                this.parent.doSecondActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+                this.parent.doSecondActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
             } else if(SwingUtilities.isMiddleMouseButton(e)){
-                this.parent.doThirdActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+                this.parent.doThirdActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
             }
         }
 
@@ -650,7 +622,8 @@ public class Pixelizer extends JFrame {
 	    this.colorChooser.setColor(argb);
 	}
 
-	public void doFirstActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+	public void doFirstActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+        requestFocus();
         if (NB_PIXELS > x && NB_PIXELS > y) {
             switch(toolSelected){
                 case PEN:
@@ -663,9 +636,11 @@ public class Pixelizer extends JFrame {
                     fillColor(x, y, this.colorChooser.getColor());
                     break;
                 case MAGIC_WAND:
+
                 case MOVE:
+                    break;
                 case SELECT:
-                    //TODO
+                    this.selectionMask[x][y] = true;
                     break;
                 default:
                     break;
@@ -674,7 +649,8 @@ public class Pixelizer extends JFrame {
     }
 
 
-    private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+    private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+        requestFocus();
         switch(toolSelected){
             case PEN:
             case FILL:
@@ -683,17 +659,21 @@ public class Pixelizer extends JFrame {
             case CLEAR:
             case MAGIC_WAND:
             case MOVE:
+                break;
             case SELECT:
-                //TODO
+                this.selectionMask[x][y] = false;
                 break;
             default:
                 break;
         }
     }
 
-    private void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+    private void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+        requestFocus();
         switch(toolSelected){
             case PEN:
+                applyColor(x, y, NO_COLOR);
+                break;
             case FILL:
             case CLEAR:
             case MAGIC_WAND:

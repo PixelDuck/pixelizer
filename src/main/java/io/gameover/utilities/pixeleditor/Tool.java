@@ -11,12 +11,12 @@ import java.awt.Dimension;
 * To change this template use File | Settings | File Templates.
 */
 public enum Tool {
-    PEN("/img/pencil.png"),
-    FILL("/img/paintcan.png"),
-    CLEAR("/img/cross.png"),
-    SELECT("/img/shape_square_edit.png"),
-    MAGIC_WAND("/img/wand.png"),
-    MOVE("/img/shape_handles.png");
+    PEN("/draw-freehand.png"),
+    FILL("/color-fill.png"),
+    CLEAR("/draw-eraser.png"),
+    SELECT("/select-continuous-area.png"),
+    MAGIC_WAND("/select-lasso.png"),
+    MOVE("/transform-move.png");
 
     private JToggleButton button;
 
