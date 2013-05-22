@@ -12,7 +12,7 @@
 
 package io.gameover.utilities.pixeleditor;
 
-import oracle.jrockit.jfr.settings.JSONElement;
+import io.gameover.utilities.pixeleditor.colorchooser.ColorChooserPanel;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -24,7 +24,6 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
-import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,7 +35,6 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
-import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -58,7 +56,7 @@ public class Pixelizer extends JFrame {
 
     private ImagePanel imagePanel;
 	private JMenuBar appMenuBar;
-	private JColorChooser colorChooser;
+    private ColorChooserPanel colorChooser;
     private JPanel toolsPanel;
     private JPanel tolerancePanel;
     private JPanel animationPanel;
@@ -353,8 +351,7 @@ public class Pixelizer extends JFrame {
     public JPanel getColorPanel() {
         if(this.colorPanel==null){
             this.colorPanel = new JPanel(new BorderLayout());
-            colorChooser = new JColorChooser();
-            colorChooser.setPreviewPanel(new JPanel());
+            colorChooser = new ColorChooserPanel();
             this.colorPanel.add(colorChooser, BorderLayout.CENTER);
 
         }
@@ -365,7 +362,7 @@ public class Pixelizer extends JFrame {
         if (this.tolerancePanel == null) {
             this.tolerancePanel = new JPanel(new GridBagLayout());
             Insets i = new Insets(2,2,2,2);
-            this.tolerancePanel.add(new JLabel("Tolerance"), gbcXYI(1, 1, 0d, 0d, i));
+            this.tolerancePanel.add(new JLabel("Tolerance"), LayoutUtils.xyi(1, 1, 0d, 0d, i));
             JButton clearToleranceBTN = new JButton("-");
             clearToleranceBTN.addActionListener(new ActionListener(){
                 @Override
@@ -373,8 +370,8 @@ public class Pixelizer extends JFrame {
                     getToleranceBar().setValue(0);
                 }
             });
-            this.tolerancePanel.add(clearToleranceBTN, gbcXYI(2, 1, 0d, 0d, i));
-            this.tolerancePanel.add(getToleranceBar(), gbcXYI(3, 1, 0d, 0d, i));
+            this.tolerancePanel.add(clearToleranceBTN, LayoutUtils.xyi(2, 1, 0d, 0d, i));
+            this.tolerancePanel.add(getToleranceBar(), LayoutUtils.xyi(3, 1, 0d, 0d, i));
             JButton maxToleranceBTN = new JButton("+");
             maxToleranceBTN.addActionListener(new ActionListener(){
                 @Override
@@ -382,7 +379,7 @@ public class Pixelizer extends JFrame {
                     getToleranceBar().setValue(100);
                 }
             });
-            this.tolerancePanel.add(maxToleranceBTN, gbcXYI(4, 1, 0d, 0d, i));
+            this.tolerancePanel.add(maxToleranceBTN, LayoutUtils.xyi(4, 1, 0d, 0d, i));
         }
         return tolerancePanel;
     }
@@ -391,7 +388,7 @@ public class Pixelizer extends JFrame {
         if (this.animationPanel == null) {
             this.animationPanel = new JPanel(new BorderLayout());
             this.animationPanel.add(getAnimation(), BorderLayout.CENTER);
-            this.animationPanel.add(getSelectFramePanel(), BorderLayout.NORTH);
+            this.animationPanel.add(getSelectFramePanel(), BorderLayout.WEST);
         }
         return animationPanel;
     }
@@ -407,7 +404,7 @@ public class Pixelizer extends JFrame {
     }
 
     public void addSelectFrameButtonToPanel(int index, JToggleButton btn){
-        this.selectFramePanel.add(btn, gbcXYI(index%4+1, index/4+1, 0d, 0d, new Insets(1,1,1,1)));
+        this.selectFramePanel.add(btn, LayoutUtils.xyi(index % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
     }
 
     private void addNewFrame(int index, int copyIndex){
@@ -481,34 +478,17 @@ public class Pixelizer extends JFrame {
         }
     }
 
-    public static GridBagConstraints gbcXYI(int x, int y, double wx, double wy, Insets i){
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx=x;
-        gbc.gridy=y;
-        gbc.weightx = wx;
-        gbc.weighty = wy;
-        gbc.insets=i;
-        gbc.fill = 1;
-        return gbc;
-    }
-
-    public static GridBagConstraints gbcXYWI(int x, int y, int gw, double wx, double wy, Insets i){
-        GridBagConstraints gbc = gbcXYI(x, y, wx, wy, i);
-        gbc.gridwidth=gw;
-        return gbc;
-    }
-
     private void initPanels() {
         JPanel mainPanel = new JPanel(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
         Insets insets = new Insets(2, 2, 2 ,2);
 
-        mainPanel.add(getColorPanel(), gbcXYWI(1, 1, 3, 1.0d, 0.0d, insets));
-        mainPanel.add(getToolsPanel(), gbcXYI(1, 2,  0.0d, 0.0d, insets));
-        mainPanel.add(new JScrollPane(getImagePanel()), gbcXYI(2, 2,  1.0d, 1.0d, insets));
-        mainPanel.add(getAnimationPanel(), gbcXYI(3, 2,  0.0d, 0.0d, insets));
-        mainPanel.add(getTolerancePanel(), gbcXYI(2, 3,  0.0d, 0.0d, insets));
+        mainPanel.add(getAnimationPanel(), LayoutUtils.xywi(1, 1, 3, 1.0d, 0.0d, insets));
+        mainPanel.add(getToolsPanel(), LayoutUtils.xyi(1, 2, 0.0d, 0.0d, insets));
+        mainPanel.add(new JScrollPane(getImagePanel()), LayoutUtils.xyi(2, 2, 1.0d, 1.0d, insets));
+        mainPanel.add(getColorPanel(), LayoutUtils.xyi(3, 2,0.0d, 0.0d, insets));
+        mainPanel.add(getTolerancePanel(), LayoutUtils.xyi(2, 3, 0.0d, 0.0d, insets));
 
         setContentPane(mainPanel);
     }
@@ -678,7 +658,7 @@ public class Pixelizer extends JFrame {
 
 	public void updateColorChooser(int i, int j, int p) {
         int[] argb = ColorUtils.extractARGB(p);
-	    this.colorChooser.setColor(new Color(argb[1], argb[2], argb[3], argb[0]));
+	    this.colorChooser.setColor(argb);
 	}
 
 	public void doFirstActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
@@ -711,11 +691,10 @@ public class Pixelizer extends JFrame {
         }
     }
 
-    public void fillColor(int x, int y, Color c){
-        int p = ColorUtils.convertToColorAsInt(c);
-        if(getCurrentFrame().getColor(x, y)!=p){
+    public void fillColor(int x, int y, int c){
+        if(getCurrentFrame().getColor(x, y)!=c){
             saveBeforeModification();
-            getCurrentFrame().fillColor(x, y, p, getToleranceBar().getValue());
+            getCurrentFrame().fillColor(x, y, c, getToleranceBar().getValue());
             this.imagePanel.repaint();
         }
     }
