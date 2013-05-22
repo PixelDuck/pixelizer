@@ -59,7 +59,7 @@ public class ColorChooserPanel extends JPanel {
 
     public void setColor(int ... argb){
         float[] hsv = ColorUtils.convertRGBToHSV(argb);
-        this.hue = hsv[0]/360f;
+        this.hue = hsv[0];
         this.saturation = hsv[1];
         this.value = hsv[2];
         this.hPanel.setHue(hue);

@@ -64,6 +64,7 @@ public class HueGradientPanel extends JPanel implements Observable<HueChangeEven
 
     public void setHue(float hue){
         this.hue = hue;
+        repaint();
     }
 
     private BufferedImage getBufferedImage(){

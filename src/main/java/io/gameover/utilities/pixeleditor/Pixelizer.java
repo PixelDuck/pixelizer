@@ -35,6 +35,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -487,7 +488,7 @@ public class Pixelizer extends JFrame {
         mainPanel.add(getAnimationPanel(), LayoutUtils.xywi(1, 1, 3, 1.0d, 0.0d, insets));
         mainPanel.add(getToolsPanel(), LayoutUtils.xyi(1, 2, 0.0d, 0.0d, insets));
         mainPanel.add(new JScrollPane(getImagePanel()), LayoutUtils.xyi(2, 2, 1.0d, 1.0d, insets));
-        mainPanel.add(getColorPanel(), LayoutUtils.xyi(3, 2,0.0d, 0.0d, insets));
+        mainPanel.add(getColorPanel(), LayoutUtils.xyi(3, 2, 0.0d, 0.0d, insets));
         mainPanel.add(getTolerancePanel(), LayoutUtils.xyi(2, 3, 0.0d, 0.0d, insets));
 
         setContentPane(mainPanel);
@@ -583,14 +584,12 @@ public class Pixelizer extends JFrame {
 
         private void doMouse(MouseEvent e) {
             int[] xy = findPixelIndices(e.getX(), e.getY());
-            switch (e.getButton()) {
-                default:
-                case MouseEvent.BUTTON1:
-                    this.parent.doFirstActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
-                    break;
-                case MouseEvent.BUTTON3:
-                    this.parent.doSecondActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
-                    break;
+            if(SwingUtilities.isLeftMouseButton(e)){
+                this.parent.doFirstActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+            } else if(SwingUtilities.isRightMouseButton(e)){
+                this.parent.doSecondActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
+            } else if(SwingUtilities.isMiddleMouseButton(e)){
+                this.parent.doThirdActionTool(xy[0], xy[1], (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0, (e.getModifiers() & KeyEvent.CTRL_MASK) != 0);
             }
         }
 
@@ -622,16 +621,6 @@ public class Pixelizer extends JFrame {
 		}
 	}
 
-    private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
-        switch(toolSelected){
-            case PEN:
-            case FILL:
-                updateColorChooser(x, y);
-                break;
-            default:
-                break;
-        }
-    }
 
     private class InternalActionListener implements ActionListener {
 		private Pixelizer parent;
@@ -673,9 +662,47 @@ public class Pixelizer extends JFrame {
                 case FILL:
                     fillColor(x, y, this.colorChooser.getColor());
                     break;
+                case MAGIC_WAND:
+                case MOVE:
+                case SELECT:
+                    //TODO
+                    break;
                 default:
                     break;
             }
+        }
+    }
+
+
+    private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+        switch(toolSelected){
+            case PEN:
+            case FILL:
+                updateColorChooser(x, y);
+                break;
+            case CLEAR:
+            case MAGIC_WAND:
+            case MOVE:
+            case SELECT:
+                //TODO
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed) {
+        switch(toolSelected){
+            case PEN:
+            case FILL:
+            case CLEAR:
+            case MAGIC_WAND:
+            case MOVE:
+            case SELECT:
+                //TODO
+                break;
+            default:
+                break;
         }
     }
 
