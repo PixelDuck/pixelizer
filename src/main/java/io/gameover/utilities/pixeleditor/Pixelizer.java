@@ -43,6 +43,10 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  * Main class.
+ *
+ * icons are taken from tango project.
+ *
+ * http://jimmac.musichall.cz/themes.php?skin=7
  */
 public class Pixelizer extends JFrame {
 
@@ -52,10 +56,10 @@ public class Pixelizer extends JFrame {
 	private static final int MARGIN = 1;
 	private static final int NB_PIXELS = 32;
     public static final int NO_COLOR_AS_INT = 0x00000000;
-    private static final Color NO_COLOR = new Color(NO_COLOR_AS_INT);
     public static final String ACTION_OPEN = "open";
     public static final String ACTION_SAVE_AS_PNG = "save_as_PNG";
     public static final String ACTION_CLEAR = "clear";
+    public static final String ACTION_CLEAR_SELECTION = "clearSelection";
 
     private ImagePanel imagePanel;
 	private JMenuBar appMenuBar;
@@ -77,7 +81,6 @@ public class Pixelizer extends JFrame {
     private ActionListener selectFrameActionListener;
     private JPanel animation;
 
-
     /**
      * Constructor.
      */
@@ -87,7 +90,7 @@ public class Pixelizer extends JFrame {
         frames = new ArrayList<>();
         frames.add(new Frame());
         currentFrameIndex = 0;
-        selectionMask = new boolean[PIXEL_SIZE][PIXEL_SIZE];
+        selectionMask = new boolean[NB_PIXELS][NB_PIXELS];
         reset();
         applyLookAndFeel();
         setTitle("Pixelizer");
@@ -120,6 +123,10 @@ public class Pixelizer extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean isSelected(int x, int y){
+        return this.selectionMask[x][y];
     }
 
     public JPanel getSelectFramePanel() {
@@ -215,6 +222,7 @@ public class Pixelizer extends JFrame {
 
     private void selectFrame(int index) {
         this.currentFrameIndex=index;
+        clearSelection();
         this.savedStates.clear();
         repaint();
     }
@@ -250,13 +258,14 @@ public class Pixelizer extends JFrame {
         }
 
         public void fillColor(int x, int y, int newColor, int tolerance) {
-            List<Point> points = findPoint(x, y, getColor(x, y), tolerance);
+            List<Point> points = findPoint(x, y, tolerance);
             for(Point p : points){
                 setColor(p.x, p.y, newColor);
             }
         }
 
-        public List<Point> findPoint(int x, int y, int color, int tolerance) {
+        public List<Point> findPoint(int x, int y, int tolerance) {
+            int color = getColor(x, y);
             Set<Point> scanned = new HashSet<>();
             List<Point> ret = new ArrayList<>();
             findPointAux(x, y, color, tolerance, ret, scanned);
@@ -297,6 +306,19 @@ public class Pixelizer extends JFrame {
                 selectionMask[i][j] = false;
             }
         }
+        repaint();
+    }
+
+    private void deleteSelection(){
+        for(int i=0; i<selectionMask.length; i++){
+            for(int j=0; j<selectionMask[0].length; j++){
+                if(selectionMask[i][j]){
+                    getCurrentFrame().setColor(i, j, NO_COLOR_AS_INT);
+                }
+            }
+        }
+        clearSelection();
+        repaint();
     }
 
     public JPanel getToolsPanel() {
@@ -418,9 +440,6 @@ public class Pixelizer extends JFrame {
         if(imagePanel==null){
             this.imagePanel = new ImagePanel(this);
             this.imagePanel.setIgnoreRepaint(true);
-            InternalMouseListener mouseListener = new InternalMouseListener(this);
-            this.imagePanel.addMouseListener(mouseListener);
-            this.imagePanel.addMouseMotionListener(mouseListener);
         }
         return imagePanel;
     }
@@ -444,6 +463,9 @@ public class Pixelizer extends JFrame {
                 this.parent.toolSelected.getButton().setSelected(false);
                 toolSelected.getButton().setSelected(true);
                 this.parent.toolSelected = toolSelected;
+            } else {
+                toolSelected.getButton().setSelected(true);
+                toolSelected.getButton().updateUI();
             }
         }
     }
@@ -456,7 +478,7 @@ public class Pixelizer extends JFrame {
 
         mainPanel.add(getAnimationPanel(), LayoutUtils.xywi(1, 1, 3, 1.0d, 0.0d, insets));
         mainPanel.add(getToolsPanel(), LayoutUtils.xyi(1, 2, 0.0d, 0.0d, insets));
-        mainPanel.add(new JScrollPane(getImagePanel()), LayoutUtils.xyi(2, 2, 1.0d, 1.0d, insets));
+        mainPanel.add(getImagePanel(), LayoutUtils.xyi(2, 2, 1.0d, 1.0d, new Insets(5,5,5,5)));
         mainPanel.add(getColorPanel(), LayoutUtils.xyi(3, 2, 0.0d, 0.0d, insets));
         mainPanel.add(getTolerancePanel(), LayoutUtils.xyi(2, 3, 0.0d, 0.0d, insets));
 
@@ -519,6 +541,10 @@ public class Pixelizer extends JFrame {
             clearChangesMenu.setActionCommand(ACTION_CLEAR);
             clearChangesMenu.addActionListener(actionListener);
             menuEdit.add(clearChangesMenu);
+            JMenuItem clearSelectionMenu = new JMenuItem("Clear selection");
+            clearSelectionMenu.setActionCommand(ACTION_CLEAR_SELECTION);
+            clearSelectionMenu.addActionListener(actionListener);
+            menuEdit.add(clearSelectionMenu);
             appMenuBar.add(menuEdit);
         }
 
@@ -534,64 +560,6 @@ public class Pixelizer extends JFrame {
 		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
 	}
 
-	private class InternalMouseListener extends MouseAdapter {
-		private Pixelizer parent;
-		private boolean isMouseIn;
-		private boolean isMousePressed;
-
-		InternalMouseListener(Pixelizer parent) {
-			this.parent = parent;
-		}
-
-		@Override
-		public void mouseReleased(MouseEvent e) {
-			if (isMouseIn && isMousePressed) {
-				this.isMousePressed = false;
-                doMouse(e);
-			}
-		}
-
-        private void doMouse(MouseEvent e) {
-            int[] xy = findPixelIndices(e.getX(), e.getY());
-            boolean shiftPressed = (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0;
-            boolean ctrlPressed = (e.getModifiers() & KeyEvent.CTRL_MASK) != 0;
-            boolean altPressed = (e.getModifiers() & KeyEvent.ALT_MASK) != 0;
-            if(SwingUtilities.isLeftMouseButton(e)){
-                this.parent.doFirstActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
-            } else if(SwingUtilities.isRightMouseButton(e)){
-                this.parent.doSecondActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
-            } else if(SwingUtilities.isMiddleMouseButton(e)){
-                this.parent.doThirdActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
-            }
-        }
-
-        @Override
-		public void mouseEntered(MouseEvent e) {
-			this.isMouseIn = true;
-		}
-
-		@Override
-		public void mouseExited(MouseEvent e) {
-			this.isMouseIn = false;
-		}
-
-		@Override
-		public void mousePressed(MouseEvent e) {
-			this.isMousePressed = true;
-		}
-
-		@Override
-		public void mouseDragged(MouseEvent e) {
-			if (isMouseIn && isMousePressed) {
-				doMouse(e);
-			}
-		}
-
-		private int[] findPixelIndices(int x, int y) {
-			return new int[] {x / (PIXEL_SIZE + MARGIN),
-                    y / (PIXEL_SIZE + MARGIN)};
-		}
-	}
 
 
     private class InternalActionListener implements ActionListener {
@@ -609,7 +577,9 @@ public class Pixelizer extends JFrame {
                 this.parent.actionSaveAsPNG();
 			} else if (e.getActionCommand().equals(ACTION_CLEAR)) {
 				this.parent.actionClearChange();
-			}
+			} else if(e.getActionCommand().equals(ACTION_CLEAR_SELECTION)){
+                this.parent.clearSelection();
+            }
 		}
 	}
 
@@ -622,25 +592,30 @@ public class Pixelizer extends JFrame {
 	    this.colorChooser.setColor(argb);
 	}
 
-	public void doFirstActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+	public void doFirstActionTool(int i, int j, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
         requestFocus();
-        if (NB_PIXELS > x && NB_PIXELS > y) {
+        if (NB_PIXELS > i && NB_PIXELS > j) {
             switch(toolSelected){
                 case PEN:
-                    applyColor(x, y, this.colorChooser.getColor());
+                    clearSelection();
+                    applyColor(i, j, this.colorChooser.getColor());
                     break;
                 case CLEAR:
-                    applyColor(x, y, NO_COLOR);
+                    clearSelection();
+                    applyColor(i, j, NO_COLOR_AS_INT);
                     break;
                 case FILL:
-                    fillColor(x, y, this.colorChooser.getColor());
+                    clearSelection();
+                    fillColor(i, j, this.colorChooser.getColor());
                     break;
                 case MAGIC_WAND:
-
+                    changeSelectionNearPoint(i, j, true);
+                    break;
                 case MOVE:
                     break;
                 case SELECT:
-                    this.selectionMask[x][y] = true;
+                    this.selectionMask[i][j] = true;
+                    repaint();
                     break;
                 default:
                     break;
@@ -648,31 +623,42 @@ public class Pixelizer extends JFrame {
         }
     }
 
+    private void changeSelectionNearPoint(int x, int y, boolean select) {
+        List<Point> points = getCurrentFrame().findPoint(x, y, getToleranceBar().getValue());
+        for(Point p : points){
+            selectionMask[p.x][p.y] = select;
+        }
+        repaint();
+    }
 
-    private void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+
+    public void doSecondActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
         requestFocus();
         switch(toolSelected){
             case PEN:
             case FILL:
+            case CLEAR:
                 updateColorChooser(x, y);
                 break;
-            case CLEAR:
             case MAGIC_WAND:
+                changeSelectionNearPoint(x, y, true);
+                break;
             case MOVE:
                 break;
             case SELECT:
                 this.selectionMask[x][y] = false;
+                repaint();
                 break;
             default:
                 break;
         }
     }
 
-    private void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
+    public void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
         requestFocus();
         switch(toolSelected){
             case PEN:
-                applyColor(x, y, NO_COLOR);
+                applyColor(x, y, NO_COLOR_AS_INT);
                 break;
             case FILL:
             case CLEAR:
@@ -747,8 +733,8 @@ public class Pixelizer extends JFrame {
 	}
 
     public void reset(){
+        clearSelection();
         getCurrentFrame().reset();
-
     }
 
     private void setCurrentPixel(int i, int j, int color){
@@ -791,6 +777,7 @@ public class Pixelizer extends JFrame {
                     }
                     fillPanelWithButton(nb);
                 }
+                clearSelection();
                 repaint();
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -836,6 +823,8 @@ public class Pixelizer extends JFrame {
                 this.parent.restorePreviousState();
             } else if(e.getKeyCode()==KeyEvent.VK_Y && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
                 this.parent.restoreNextState();
+            } else if(e.getKeyCode()==KeyEvent.VK_DELETE){
+                this.parent.deleteSelection();
             }
         }
     }

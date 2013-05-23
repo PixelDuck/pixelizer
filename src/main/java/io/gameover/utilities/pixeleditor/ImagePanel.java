@@ -13,22 +13,32 @@
 package io.gameover.utilities.pixeleditor;
 
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * Main panel to display image.
  */
-public class ImagePanel extends JPanel {
+public class ImagePanel extends JPanel{
 
+    private final Cursor precisionCursor;
     private Pixelizer parent;
 
     public ImagePanel(Pixelizer parent) {
         this.parent = parent;
         setDoubleBuffered(true);
         setSize(this.parent.getImageWidth(), this.parent.getImageHeight());
+        this.precisionCursor = SwingUtils.createCursor("/cursors/precision.png", 16, 16, "precision");
+        InternalMouseListener mouseListener = new InternalMouseListener(this.parent);
+        addMouseListener(mouseListener);
+        addMouseMotionListener(mouseListener);
     }
 
     protected Pixelizer.Frame getFrame(){
@@ -43,29 +53,42 @@ public class ImagePanel extends JPanel {
         int h = this.parent.getImageHeight();
 
         for (int i = 0; i < parent.getNbPixels(); i++) {
-            g2d.setPaint(Color.black);
-            g2d.fillRect((i + 1) * (parent.getPixelSize() + parent.getMargin()), 0, parent.getMargin(), h);
+            //grid horizontal
+//            g2d.setPaint(Color.black);
+//            g2d.fillRect((i + 1) * (parent.getPixelSize() + parent.getMargin()), 0, parent.getMargin(), h);
             for (int j = 0; j < parent.getNbPixels(); j++) {
                 int c = getFrame().getColor(i, j);
                 g2d.setPaint(ColorUtils.overlayWithColor(Color.GRAY, c));
-                g2d.fillRect(parent.getMargin() + i * (parent.getPixelSize() + parent.getMargin()), parent.getMargin()
-                        + j * (parent.getPixelSize() + parent.getMargin()), parent.getPixelSize() / 2,
-                        parent.getPixelSize() / 2);
-                g2d.fillRect(parent.getMargin() + i * (parent.getPixelSize() + parent.getMargin())
-                        + parent.getPixelSize() / 2, parent.getMargin() + j
-                        * (parent.getPixelSize() + parent.getMargin()) + parent.getPixelSize() / 2,
-                        parent.getPixelSize() / 2, parent.getPixelSize() / 2);
+                int margin = parent.getMargin();
+                int pixelSize = parent.getPixelSize();
+                g2d.fillRect(margin + i * (pixelSize + margin), margin
+                        + j * (pixelSize + margin), pixelSize / 2,
+                        pixelSize / 2);
+                g2d.fillRect(margin + i * (pixelSize + margin)
+                        + pixelSize / 2, margin + j
+                        * (pixelSize + margin) + pixelSize / 2,
+                        pixelSize / 2, pixelSize / 2);
                 g2d.setPaint(ColorUtils.overlayWithColor(Color.LIGHT_GRAY, c));
-                g2d.fillRect(parent.getMargin() + i * (parent.getPixelSize() + parent.getMargin())
-                        + parent.getPixelSize() / 2, parent.getMargin() + j
-                        * (parent.getPixelSize() + parent.getMargin()), parent.getPixelSize() / 2,
-                        parent.getPixelSize() / 2);
-                g2d.fillRect(parent.getMargin() + i * (parent.getPixelSize() + parent.getMargin()), parent.getMargin()
-                        + j * (parent.getPixelSize() + parent.getMargin()) + parent.getPixelSize() / 2,
-                        parent.getPixelSize() / 2, parent.getPixelSize() / 2);
-                g2d.setPaint(Color.black);
-                g2d.fillRect(0, (j + 1) * (parent.getPixelSize() + parent.getMargin()), w,
-                        parent.getMargin());
+                g2d.fillRect(margin + i * (pixelSize + margin)
+                        + pixelSize / 2, margin + j
+                        * (pixelSize + margin), pixelSize / 2,
+                        pixelSize / 2);
+                g2d.fillRect(margin + i * (pixelSize + margin), margin
+                        + j * (pixelSize + margin) + pixelSize / 2,
+                        pixelSize / 2, pixelSize / 2);
+                //grid vertical
+//                if(i==0){
+//                    g2d.setPaint(Color.black);
+//                    g2d.fillRect(0, (j + 1) * (parent.getPixelSize() + parent.getMargin()), w,
+//                            parent.getMargin());
+//                }
+                if(parent.isSelected(i, j)){
+                    g2d.setPaint(Color.white);
+                } else {
+                    g2d.setPaint(Color.black);
+                }
+                g2d.drawRect(margin + i * (pixelSize + margin)-1, margin
+                        + j * (pixelSize + margin) -1, pixelSize + margin, pixelSize + margin);
             }
         }
         g2d.setPaint(Color.black);
@@ -73,6 +96,89 @@ public class ImagePanel extends JPanel {
         g2d.fillRect(0, 0, parent.getMargin(), h);
         g2d.dispose();
         Toolkit.getDefaultToolkit().sync();
+    }
+
+
+    private class InternalMouseListener extends MouseAdapter {
+        private Pixelizer parent;
+        private boolean isMouseIn;
+        private boolean isMousePressed;
+
+        InternalMouseListener(Pixelizer parent) {
+            this.parent = parent;
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            updateMouseCursor(e.getX(), e.getY());
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            if (isMouseIn && isMousePressed) {
+                this.isMousePressed = false;
+                doMouse(e);
+            }
+        }
+
+        private void updateMouseCursor(int x, int y){
+            if(isMouseIn){
+                int[] xy = findPixelIndices(x, y);
+                if(xy[0]<this.parent.getNbPixels() && xy[1]<this.parent.getNbPixels()){
+                    setCursor(precisionCursor);
+                } else {
+                    setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+                }
+            } else {
+                setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            }
+        }
+
+        private void doMouse(MouseEvent e) {
+            int[] xy = findPixelIndices(e.getX(), e.getY());
+            if(xy[0]<this.parent.getNbPixels() && xy[1]<this.parent.getNbPixels()){
+                boolean shiftPressed = (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0;
+                boolean ctrlPressed = (e.getModifiers() & KeyEvent.CTRL_MASK) != 0;
+                boolean altPressed = (e.getModifiers() & KeyEvent.ALT_MASK) != 0;
+                if(SwingUtilities.isLeftMouseButton(e)){
+                    this.parent.doFirstActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
+                } else if(SwingUtilities.isRightMouseButton(e)){
+                    this.parent.doSecondActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
+                } else if(SwingUtilities.isMiddleMouseButton(e)){
+                    this.parent.doThirdActionTool(xy[0], xy[1], shiftPressed, ctrlPressed, altPressed);
+                }
+            }
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            this.isMouseIn = true;
+            updateMouseCursor(e.getX(), e.getY());
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            this.isMouseIn = false;
+            updateMouseCursor(e.getX(), e.getY());
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            this.isMousePressed = true;
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent e) {
+            if (isMouseIn && isMousePressed) {
+                doMouse(e);
+            }
+            updateMouseCursor(e.getX(), e.getY());
+        }
+
+        private int[] findPixelIndices(int x, int y) {
+            return new int[] {x / (parent.getPixelSize()+ parent.getMargin()),
+                    y / (parent.getPixelSize()+ parent.getMargin())};
+        }
     }
 
 }
