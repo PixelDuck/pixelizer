@@ -52,8 +52,6 @@ public class Pixelizer extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-	private static final int PIXEL_SIZE = 10;
-	private static final int MARGIN = 1;
 	private static final int NB_PIXELS = 32;
     public static final int NO_COLOR_AS_INT = 0x00000000;
     public static final String ACTION_OPEN = "open";
@@ -189,16 +187,57 @@ public class Pixelizer extends JFrame {
         return NB_PIXELS;
     }
 
-    public int getPixelSize() {
-        return PIXEL_SIZE;
-    }
-
-    public int getMargin() {
-        return MARGIN;
-    }
-
     public List<Frame> getPixelFrames() {
         return frames;
+    }
+
+    public void moveFrameRight(int frameIndex) {
+        Frame frame = frames.get(frameIndex);
+        frames.remove(frameIndex);
+        frames.add(frameIndex+1, frame);
+        this.currentFrameIndex = frameIndex+1;
+        this.animationPanel.updateUI();
+    }
+
+    public void moveFrameLeft(int frameIndex) {
+        Frame frame = frames.get(frameIndex);
+        frames.remove(frameIndex);
+        frames.add(frameIndex-1, frame);
+        this.currentFrameIndex = frameIndex-1;
+        this.animationPanel.updateUI();
+    }
+
+    public void insertFrameRight(int frameIndex) {
+        insertNewFrame(frameIndex + 1, frameIndex);
+    }
+
+    public void insertFrameLeft(int frameIndex) {
+        insertNewFrame(frameIndex, frameIndex);
+    }
+
+    public static class SelectFramePopClickListener extends MouseAdapter {
+        private final Pixelizer parent;
+        private final int frameIndex;
+
+        public SelectFramePopClickListener(Pixelizer parent, int frameIndex) {
+            this.frameIndex = frameIndex;
+            this.parent = parent;
+        }
+
+        public void mousePressed(MouseEvent e){
+            if (e.isPopupTrigger())
+                doPop(e);
+        }
+
+        public void mouseReleased(MouseEvent e){
+            if (e.isPopupTrigger())
+                doPop(e);
+        }
+
+        private void doPop(MouseEvent e){
+            AnimationFrameContextMenu menu = new AnimationFrameContextMenu(this.parent, frameIndex);
+            menu.show(e.getComponent(), e.getX(), e.getY());
+        }
     }
 
     public static class SelectFrameActionListener implements ActionListener{
@@ -399,8 +438,8 @@ public class Pixelizer extends JFrame {
         this.selectFramePanel.add(btn, LayoutUtils.xyi(index % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
     }
 
-    private void addNewFrame(int index, int copyIndex){
-        Frame f = null;
+    public void insertNewFrame(int index, int copyIndex){
+        Frame f;
         if(copyIndex!=-1){
             f = this.frames.get(copyIndex).clone();
         } else {
@@ -408,8 +447,8 @@ public class Pixelizer extends JFrame {
         }
         this.frames.add(index, f);
         this.currentFrameIndex = index;
-        this.selectFramePanel.add(createSelectFrameButton(this.frames.size()));
-        repaint();
+        this.selectFramePanel.add(createSelectFrameButton(this.frames.size()), LayoutUtils.xyi(frames.size() % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
+        ((JPanel)getContentPane()).updateUI();
     }
 
     private JToggleButton createSelectFrameButton(int index) {
@@ -417,23 +456,25 @@ public class Pixelizer extends JFrame {
         button.setPreferredSize(new Dimension(20,20));
         button.setMargin(new Insets(0, 0, 0, 0));
         button.setFont(button.getFont().deriveFont(9f));
-        button.setActionCommand("" + (index-1));
+        button.setActionCommand("" + (index - 1));
         button.addActionListener(
                 getSelectFrameActionListener());
+        button.addMouseListener(new SelectFramePopClickListener(this, index-1));
         this.selectFrameButtons.add(button);
         return button;
     }
 
-    private void removeFrame(int index){
+    public void removeFrame(int index){
         if(this.frames.size()>1){
-            if(this.currentFrameIndex == index){
-                if(this.currentFrameIndex==this.frames.size()-1){
-                    this.currentFrameIndex--;
-                }
+            if(index==this.frames.size()-1){
+                currentFrameIndex--;
             }
             this.frames.remove(index);
-            repaint();
+            this.selectFramePanel.remove(index);
+        } else {
+            actionClearChange();
         }
+        ((JPanel)getContentPane()).updateUI();
     }
 
     public ImagePanel getImagePanel() {
@@ -552,13 +593,13 @@ public class Pixelizer extends JFrame {
     }
 
 
-	public int getImageWidth() {
-		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
-	}
-
-	public int getImageHeight() {
-		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
-	}
+//	public int getImageWidth() {
+//		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
+//	}
+//
+//	public int getImageHeight() {
+//		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
+//	}
 
 
 

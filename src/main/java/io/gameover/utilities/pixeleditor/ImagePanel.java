@@ -28,13 +28,16 @@ import java.awt.event.MouseEvent;
  */
 public class ImagePanel extends JPanel{
 
+    private static final int PIXEL_SIZE = 10;
+    private static final int PANEL_MARGIN = 1;
+    private static final int PIXEL_MARGIN = 1;
+
     private final Cursor precisionCursor;
     private Pixelizer parent;
 
     public ImagePanel(Pixelizer parent) {
         this.parent = parent;
         setDoubleBuffered(true);
-        setSize(this.parent.getImageWidth(), this.parent.getImageHeight());
         this.precisionCursor = SwingUtils.createCursor("/cursors/precision.png", 16, 16, "precision");
         InternalMouseListener mouseListener = new InternalMouseListener(this.parent);
         addMouseListener(mouseListener);
@@ -49,53 +52,56 @@ public class ImagePanel extends JPanel{
         super.paint(g);
 
         Graphics2D g2d = (Graphics2D) g;
-        int w = this.parent.getImageWidth();
-        int h = this.parent.getImageHeight();
-
-        for (int i = 0; i < parent.getNbPixels(); i++) {
-            //grid horizontal
-//            g2d.setPaint(Color.black);
-//            g2d.fillRect((i + 1) * (parent.getPixelSize() + parent.getMargin()), 0, parent.getMargin(), h);
-            for (int j = 0; j < parent.getNbPixels(); j++) {
-                int c = getFrame().getColor(i, j);
-                g2d.setPaint(ColorUtils.overlayWithColor(Color.GRAY, c));
-                int margin = parent.getMargin();
-                int pixelSize = parent.getPixelSize();
-                g2d.fillRect(margin + i * (pixelSize + margin), margin
-                        + j * (pixelSize + margin), pixelSize / 2,
-                        pixelSize / 2);
-                g2d.fillRect(margin + i * (pixelSize + margin)
-                        + pixelSize / 2, margin + j
-                        * (pixelSize + margin) + pixelSize / 2,
-                        pixelSize / 2, pixelSize / 2);
-                g2d.setPaint(ColorUtils.overlayWithColor(Color.LIGHT_GRAY, c));
-                g2d.fillRect(margin + i * (pixelSize + margin)
-                        + pixelSize / 2, margin + j
-                        * (pixelSize + margin), pixelSize / 2,
-                        pixelSize / 2);
-                g2d.fillRect(margin + i * (pixelSize + margin), margin
-                        + j * (pixelSize + margin) + pixelSize / 2,
-                        pixelSize / 2, pixelSize / 2);
-                //grid vertical
-//                if(i==0){
-//                    g2d.setPaint(Color.black);
-//                    g2d.fillRect(0, (j + 1) * (parent.getPixelSize() + parent.getMargin()), w,
-//                            parent.getMargin());
-//                }
-                if(parent.isSelected(i, j)){
-                    g2d.setPaint(Color.white);
-                } else {
-                    g2d.setPaint(Color.black);
-                }
-                g2d.drawRect(margin + i * (pixelSize + margin)-1, margin
-                        + j * (pixelSize + margin) -1, pixelSize + margin, pixelSize + margin);
-            }
-        }
-        g2d.setPaint(Color.black);
-        g2d.fillRect(0, 0, w, parent.getMargin());
-        g2d.fillRect(0, 0, parent.getMargin(), h);
+        draw(g2d, new MainDrawCallable());
+        draw(g2d, new SelectionDrawCallable());
         g2d.dispose();
         Toolkit.getDefaultToolkit().sync();
+    }
+
+    private void draw(Graphics2D g2d, DrawCallable callable){
+        for (int i = 0; i < parent.getNbPixels(); i++) {
+            for (int j = 0; j < parent.getNbPixels(); j++) {
+                int x = PANEL_MARGIN + i * (PIXEL_SIZE + PIXEL_MARGIN);
+                int y = PANEL_MARGIN + j * (PIXEL_SIZE + PIXEL_MARGIN);
+                callable.draw(g2d, i, j, x, y, this);
+            }
+        }
+    }
+
+    private static interface DrawCallable{
+        public void draw(Graphics2D g2d, int i, int j, int x, int y, ImagePanel parent);
+    }
+
+    private static class MainDrawCallable implements DrawCallable{
+        public void draw(Graphics2D g2d, int i, int j, int x, int y, ImagePanel parent){
+            int c = parent.getFrame().getColor(i, j);
+            int half = PIXEL_SIZE / 2;
+            Color bc = ColorUtils.overlayWithColor(Color.DARK_GRAY, c);
+            if(parent.parent.isSelected(i, j)){
+                bc = ColorUtils.overlayWithColor(bc, 0x550000FF);
+            }
+            g2d.setPaint(bc);
+            g2d.fillRect(x, y, half, half);
+            g2d.fillRect(x+half, y+half, half, half);
+            bc = ColorUtils.overlayWithColor(Color.LIGHT_GRAY, c);
+            if(parent.parent.isSelected(i, j)){
+                bc = ColorUtils.overlayWithColor(bc, 0x550000FF);
+            }
+            g2d.setPaint(bc);
+            g2d.fillRect(x+half, y, half, half);
+            g2d.fillRect(x, y+half, half, half);
+            g2d.setPaint(Color.black);
+            g2d.drawRect(x-1, y-1, PIXEL_SIZE+2, PIXEL_SIZE+2);
+        }
+    }
+
+    private static class SelectionDrawCallable implements DrawCallable{
+        public void draw(Graphics2D g2d, int i, int j, int x, int y, ImagePanel parent){
+            if(parent.parent.isSelected(i, j)){
+                g2d.setPaint(Color.white);
+                g2d.drawRect(x-1, y-1, PIXEL_SIZE+1, PIXEL_SIZE+1);
+            }
+        }
     }
 
 
@@ -176,8 +182,8 @@ public class ImagePanel extends JPanel{
         }
 
         private int[] findPixelIndices(int x, int y) {
-            return new int[] {x / (parent.getPixelSize()+ parent.getMargin()),
-                    y / (parent.getPixelSize()+ parent.getMargin())};
+            return new int[] {(x-PANEL_MARGIN) / (PIXEL_SIZE+PIXEL_MARGIN),
+                    (y-PANEL_MARGIN) / (PIXEL_SIZE+PIXEL_MARGIN)};
         }
     }
 

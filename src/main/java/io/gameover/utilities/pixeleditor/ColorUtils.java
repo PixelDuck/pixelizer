@@ -131,7 +131,7 @@ public final class ColorUtils {
         return ((double)a)/255d;
     }
 
-    public static Paint overlayWithColor(Color original, int c) {
+    public static Color overlayWithColor(Color original, int c) {
         int[] rgb = overlayWithColor(convertToColorAsInt(original), c);
         return new Color(rgb[0], rgb[1], rgb[2]);
     }
