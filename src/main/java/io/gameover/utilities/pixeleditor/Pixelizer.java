@@ -260,10 +260,15 @@ public class Pixelizer extends JFrame {
     }
 
     private void selectFrame(int index) {
-        this.currentFrameIndex=index;
-        clearSelection();
-        this.savedStates.clear();
-        repaint();
+        if(index>=0 && index<frames.size()){
+            this.selectFrameButtons.get(currentFrameIndex).setSelected(false);
+            this.currentFrameIndex=index;
+            clearSelection();
+            this.savedStates.clear();
+            this.selectFrameButtons.get(index).setSelected(true);
+            repaint();
+            getSelectFramePanel().updateUI();
+        }
     }
 
     public static class Frame {
@@ -357,6 +362,15 @@ public class Pixelizer extends JFrame {
             }
         }
         clearSelection();
+        repaint();
+    }
+
+    private void selectAll(){
+        for(int i=0; i<selectionMask.length; i++){
+            for(int j=0; j<selectionMask[0].length; j++){
+                selectionMask[i][j] = true;
+            }
+        }
         repaint();
     }
 
@@ -860,13 +874,32 @@ public class Pixelizer extends JFrame {
 
         @Override
         public void keyReleased(KeyEvent e) {
-            if(e.getKeyCode()==KeyEvent.VK_Z && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
+            System.out.println(e);
+            if(e.getKeyCode()>=KeyEvent.VK_1 && e.getKeyCode()<=KeyEvent.VK_9 && (e.getModifiers() & KeyEvent.ALT_MASK) != 0){
+                int frame = e.getKeyCode()-KeyEvent.VK_1;
+                this.parent.selectFrame(frame);
+            } else if(e.getKeyCode()==KeyEvent.VK_Z && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
                 this.parent.restorePreviousState();
             } else if(e.getKeyCode()==KeyEvent.VK_Y && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
                 this.parent.restoreNextState();
             } else if(e.getKeyCode()==KeyEvent.VK_DELETE){
                 this.parent.deleteSelection();
+            } else if(e.getKeyCode()==KeyEvent.VK_A && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
+                this.parent.selectAll();
+            } else {
+                for(Tool t : Tool.values()){
+                    if(t.getKeyStroke()==e.getKeyCode()){
+                        this.parent.selectTool(t);
+                    }
+                }
             }
         }
+    }
+
+    private void selectTool(Tool t) {
+        this.toolSelected.getButton().setSelected(false);
+        this.toolSelected = t;
+        t.getButton().setSelected(true);
+        ((JPanel)this.getContentPane()).updateUI();
     }
 }

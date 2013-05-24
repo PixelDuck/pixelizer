@@ -91,7 +91,7 @@ public class ImagePanel extends JPanel{
             g2d.fillRect(x+half, y, half, half);
             g2d.fillRect(x, y+half, half, half);
             g2d.setPaint(Color.black);
-            g2d.drawRect(x-1, y-1, PIXEL_SIZE+2, PIXEL_SIZE+2);
+            g2d.drawRect(x-1, y-1, PIXEL_SIZE+1, PIXEL_SIZE+1);
         }
     }
 
