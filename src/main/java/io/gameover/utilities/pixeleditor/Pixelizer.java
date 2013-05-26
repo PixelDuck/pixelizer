@@ -13,6 +13,7 @@
 package io.gameover.utilities.pixeleditor;
 
 import io.gameover.utilities.pixeleditor.colorchooser.ColorChooserPanel;
+import io.gameover.utilities.pixeleditor.utils.Utilities;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -20,6 +21,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -72,8 +74,10 @@ public class Pixelizer extends JFrame {
 
     private List<Frame> frames;
     private int currentFrameIndex;
+
+    private Point selectionPoint = new Point(0, 0);
     private boolean[][] selectionMask;
-    private List<Frame> savedStates;
+    private List<State> savedStates;
     private int currentStateIndex;
     private List<JToggleButton> selectFrameButtons;
     private ActionListener selectFrameActionListener;
@@ -145,7 +149,7 @@ public class Pixelizer extends JFrame {
 
     public JPanel getAnimation() {
         if(this.animation==null){
-            this.animation = new AnimationImagePanel(this, 12);
+            this.animation = new AnimationImagePanel(this, 5);
         }
         return animation;
     }
@@ -297,7 +301,7 @@ public class Pixelizer extends JFrame {
 
         public Frame clone(){
             Frame p = new Frame();
-            p.argb = copyArray(argb);
+            p.argb = Utilities.copyArray(argb);
             return p;
         }
 
@@ -350,6 +354,7 @@ public class Pixelizer extends JFrame {
                 selectionMask[i][j] = false;
             }
         }
+        selectionPoint = new Point(0, 0);
         repaint();
     }
 
@@ -544,7 +549,9 @@ public class Pixelizer extends JFrame {
         if(currentStateIndex >0){
             currentStateIndex--;
             this.frames.remove(currentFrameIndex);
-            this.frames.add(currentFrameIndex, savedStates.get(currentStateIndex));
+            State state = savedStates.get(currentStateIndex);
+            this.frames.add(currentFrameIndex, state.getFrame());
+            this.selectionMask = state.getSelectionMask();
             repaint();
 
         }
@@ -554,7 +561,9 @@ public class Pixelizer extends JFrame {
         if(currentStateIndex <savedStates.size()-1){
             currentStateIndex++;
             this.frames.remove(currentFrameIndex);
-            this.frames.add(currentFrameIndex, savedStates.get(currentStateIndex));
+            State state = savedStates.get(currentStateIndex);
+            this.frames.add(currentFrameIndex, state.getFrame());
+            this.selectionMask = state.getSelectionMask();
             repaint();
         }
     }
@@ -563,17 +572,10 @@ public class Pixelizer extends JFrame {
         while(savedStates.size()> currentStateIndex){
             savedStates.remove(savedStates.size()-1);
         }
-        savedStates.add(getCurrentFrame().clone());
+        savedStates.add(new State(getCurrentFrame().clone(), Utilities.copyArray(selectionMask)));
         this.currentStateIndex = savedStates.size();
     }
 
-    private static int[][] copyArray(int[][] src){
-        int[][] ret = new int[src.length][src[0].length];
-        for (int i = 0; i < ret.length; i++) {
-            System.arraycopy(src[i], 0, ret[i], 0, src[0].length);
-        }
-        return ret;
-    }
 
     private JMenuBar getAppMenuBar() {
         if(this.appMenuBar ==null){
@@ -879,9 +881,9 @@ public class Pixelizer extends JFrame {
                 int frame = e.getKeyCode()-KeyEvent.VK_1;
                 this.parent.selectFrame(frame);
             } else if(e.getKeyCode()==KeyEvent.VK_Z && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
-                this.parent.restorePreviousState();
+                this.parent.undo();
             } else if(e.getKeyCode()==KeyEvent.VK_Y && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
-                this.parent.restoreNextState();
+                this.parent.redo();
             } else if(e.getKeyCode()==KeyEvent.VK_DELETE){
                 this.parent.deleteSelection();
             } else if(e.getKeyCode()==KeyEvent.VK_A && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
@@ -896,10 +898,36 @@ public class Pixelizer extends JFrame {
         }
     }
 
+    private void redo() {
+        restoreNextState();
+    }
+
+    private void undo() {
+        restorePreviousState();
+    }
+
     private void selectTool(Tool t) {
         this.toolSelected.getButton().setSelected(false);
         this.toolSelected = t;
         t.getButton().setSelected(true);
         ((JPanel)this.getContentPane()).updateUI();
+    }
+
+    private static class State{
+        private final Frame frame;
+        private final boolean[][] selectionMask;
+
+        private State(Frame frame, boolean[][] selectionMask) {
+            this.frame = frame;
+            this.selectionMask = selectionMask;
+        }
+
+        private Frame getFrame() {
+            return frame;
+        }
+
+        private boolean[][] getSelectionMask() {
+            return selectionMask;
+        }
     }
 }
