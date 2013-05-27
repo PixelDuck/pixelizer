@@ -13,6 +13,9 @@
 package io.gameover.utilities.pixeleditor;
 
 import io.gameover.utilities.pixeleditor.colorchooser.ColorChooserPanel;
+import io.gameover.utilities.pixeleditor.utils.AnimatedGifEncoder;
+import io.gameover.utilities.pixeleditor.utils.Encoder;
+import io.gameover.utilities.pixeleditor.utils.PngEncoder;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
 
 import java.awt.*;
@@ -55,9 +58,10 @@ public class Pixelizer extends JFrame {
     private static final long serialVersionUID = 1L;
 
 	private static final int NB_PIXELS = 32;
-    public static final int NO_COLOR_AS_INT = 0x00000000;
+
     public static final String ACTION_OPEN = "open";
     public static final String ACTION_SAVE_AS_PNG = "save_as_PNG";
+    public static final String ACTION_SAVE_AS_GIF = "save_as_GIF";
     public static final String ACTION_CLEAR = "clear";
     public static final String ACTION_CLEAR_SELECTION = "clearSelection";
 
@@ -276,6 +280,8 @@ public class Pixelizer extends JFrame {
     }
 
     public static class Frame {
+        public static final int NO_COLOR_AS_INT = 0x00000000;
+
         private int[][] argb;
 
         public Frame(){
@@ -293,6 +299,14 @@ public class Pixelizer extends JFrame {
 
         public int getColor(int i, int j){
             return argb[i][j];
+        }
+
+        public int getWidth(){
+            return argb.length;
+        }
+
+        public int getHeight(){
+            return argb[0].length;
         }
 
         public void setColor(int i, int j, int color){
@@ -346,6 +360,24 @@ public class Pixelizer extends JFrame {
             }
             return ok;
         }
+
+        public BufferedImage getAsBufferedImage(){
+            return getAsBufferedImage(null);
+        }
+
+        public BufferedImage getAsBufferedImage(Color transparent){
+            BufferedImage bi = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+            for(int i=0; i<bi.getWidth(); i++){
+                for(int j=0; j<bi.getHeight(); j++){
+                    if(transparent!=null && argb[i][j]==NO_COLOR_AS_INT){
+                        bi.setRGB(i, j, transparent.getRGB());
+                    } else {
+                        bi.setRGB(i, j, argb[i][j]);
+                    }
+                }
+            }
+            return bi;
+        }
     }
 
     private void clearSelection(){
@@ -362,7 +394,7 @@ public class Pixelizer extends JFrame {
         for(int i=0; i<selectionMask.length; i++){
             for(int j=0; j<selectionMask[0].length; j++){
                 if(selectionMask[i][j]){
-                    getCurrentFrame().setColor(i, j, NO_COLOR_AS_INT);
+                    getCurrentFrame().setColor(i, j, Frame.NO_COLOR_AS_INT);
                 }
             }
         }
@@ -587,10 +619,17 @@ public class Pixelizer extends JFrame {
             InternalActionListener actionListener = new InternalActionListener(this);
             openMenu.addActionListener(actionListener);
             menuOpen.add(openMenu);
+
             JMenuItem saveMenuAsPng = new JMenuItem("Save as PNG...");
             saveMenuAsPng.setActionCommand(ACTION_SAVE_AS_PNG);
             saveMenuAsPng.addActionListener(actionListener);
             menuOpen.add(saveMenuAsPng);
+
+            JMenuItem saveMenuAsGif = new JMenuItem("Save as GIF...");
+            saveMenuAsGif.setActionCommand(ACTION_SAVE_AS_GIF);
+            saveMenuAsGif.addActionListener(actionListener);
+            menuOpen.add(saveMenuAsGif);
+
             this.appMenuBar.add(menuOpen);
 
             JMenu menuEdit = new JMenu("Edit");
@@ -632,6 +671,8 @@ public class Pixelizer extends JFrame {
 				this.parent.actionOpenFile();
 			} else if (e.getActionCommand().equals(ACTION_SAVE_AS_PNG)) {
                 this.parent.actionSaveAsPNG();
+            } else if (e.getActionCommand().equals(ACTION_SAVE_AS_GIF)) {
+                this.parent.actionSaveAsAnimatedGIF();
 			} else if (e.getActionCommand().equals(ACTION_CLEAR)) {
 				this.parent.actionClearChange();
 			} else if(e.getActionCommand().equals(ACTION_CLEAR_SELECTION)){
@@ -659,7 +700,7 @@ public class Pixelizer extends JFrame {
                     break;
                 case CLEAR:
                     clearSelection();
-                    applyColor(i, j, NO_COLOR_AS_INT);
+                    applyColor(i, j, Frame.NO_COLOR_AS_INT);
                     break;
                 case FILL:
                     clearSelection();
@@ -715,7 +756,7 @@ public class Pixelizer extends JFrame {
         requestFocus();
         switch(toolSelected){
             case PEN:
-                applyColor(x, y, NO_COLOR_AS_INT);
+                applyColor(x, y, Frame.NO_COLOR_AS_INT);
                 break;
             case FILL:
             case CLEAR:
@@ -843,27 +884,25 @@ public class Pixelizer extends JFrame {
 	}
 
     public void actionSaveAsPNG(){
+        saveImage("PNG file", "png", new PngEncoder());
+    }
+
+    public void actionSaveAsAnimatedGIF(){
+        saveImage("GIF file", "gif", new AnimatedGifEncoder());
+    }
+
+    private void saveImage(String description, String extension, Encoder encoder){
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("PNG image file", "png"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter(description, extension));
         if(fileChooser.showDialog(this, "Save")==JFileChooser.APPROVE_OPTION){
             File f = fileChooser.getSelectedFile();
             try {
-                BufferedImage bImg = new BufferedImage(NB_PIXELS*this.frames.size(), NB_PIXELS, BufferedImage.TYPE_INT_ARGB);
-                for (int c = 0; c < frames.size(); c++) {
-                    for (int i = 0; i < NB_PIXELS; i++) {
-                        for (int j = 0; j < NB_PIXELS; j++) {
-                            bImg.setRGB(i+c*NB_PIXELS, j, frames.get(c).getColor(i, j));
-                        }
-                    }
-                }
-
-                ImageIO.write(bImg, "png", f);
+                encoder.saveImage(f, frames);
                 JOptionPane.showMessageDialog(this, "File "+f.getName()+" saved!");
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Failed to save "+f.getName()+": "+e.getMessage(), "Error occured", JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
             }
-
         }
     }
 
