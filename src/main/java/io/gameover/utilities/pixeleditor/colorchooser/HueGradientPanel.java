@@ -12,7 +12,7 @@
 
 package io.gameover.utilities.pixeleditor.colorchooser;
 
-import io.gameover.utilities.pixeleditor.ColorUtils;
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import io.gameover.utilities.pixeleditor.utils.Observable;
 import io.gameover.utilities.pixeleditor.utils.Observer;
 
@@ -27,9 +27,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A panel to display a color selection with HSV values for Hue.

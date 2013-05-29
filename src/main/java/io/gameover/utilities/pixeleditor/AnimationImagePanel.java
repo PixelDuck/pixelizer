@@ -12,6 +12,8 @@
 
 package io.gameover.utilities.pixeleditor;
 
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
+
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.Color;
@@ -34,7 +36,7 @@ public class AnimationImagePanel extends JPanel {
 
     public AnimationImagePanel (final Pixelizer parent, int fps) {
         this.parent = parent;
-        image = new BufferedImage(40+parent.getNbPixels()*2, 40+parent.getNbPixels()*2, BufferedImage.TYPE_INT_ARGB);
+        image = new BufferedImage(40+Frame.NB_PIXELS*2, 40+Frame.NB_PIXELS*2, BufferedImage.TYPE_INT_ARGB);
         setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
         timer = new Timer(1000/fps, new ActionListener() {
             @Override
@@ -53,7 +55,7 @@ public class AnimationImagePanel extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g;
 
-        Pixelizer.Frame frame = this.parent.getPixelFrames().get(index);
+        Frame frame = this.parent.getPixelFrames().get(index);
 
         Graphics2D gi2d = (Graphics2D) image.getGraphics();
         for(int i=0; i<image.getWidth()/4+1; i++){
@@ -64,8 +66,8 @@ public class AnimationImagePanel extends JPanel {
             }
         }
         gi2d.dispose();
-        for (int i = 0; i < this.parent.getNbPixels(); i++) {
-            for (int j = 0; j < this.parent.getNbPixels(); j++) {
+        for (int i = 0; i < Frame.NB_PIXELS; i++) {
+            for (int j = 0; j < Frame.NB_PIXELS; j++) {
                 int c = frame.getColor(i, j);
 //                if(c!=NO_COLOR_AS_INT){
                     int[] rgb = ColorUtils.overlayWithColor(image.getRGB(i * 2 + 20, j * 2 + 20), c);

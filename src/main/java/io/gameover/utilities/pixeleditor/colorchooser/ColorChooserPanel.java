@@ -12,8 +12,8 @@
 
 package io.gameover.utilities.pixeleditor.colorchooser;
 
-import io.gameover.utilities.pixeleditor.ColorUtils;
-import io.gameover.utilities.pixeleditor.LayoutUtils;
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
+import io.gameover.utilities.pixeleditor.utils.LayoutUtils;
 import io.gameover.utilities.pixeleditor.utils.Observer;
 
 import javax.swing.JFrame;

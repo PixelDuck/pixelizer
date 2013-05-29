@@ -12,6 +12,9 @@
 
 package io.gameover.utilities.pixeleditor;
 
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
+import io.gameover.utilities.pixeleditor.utils.SwingUtils;
+
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
@@ -44,7 +47,7 @@ public class ImagePanel extends JPanel{
         addMouseMotionListener(mouseListener);
     }
 
-    protected Pixelizer.Frame getFrame(){
+    protected Frame getFrame(){
         return parent.getCurrentFrame();
     }
 
@@ -59,8 +62,8 @@ public class ImagePanel extends JPanel{
     }
 
     private void draw(Graphics2D g2d, DrawCallable callable){
-        for (int i = 0; i < parent.getNbPixels(); i++) {
-            for (int j = 0; j < parent.getNbPixels(); j++) {
+        for (int i = 0; i < Frame.NB_PIXELS; i++) {
+            for (int j = 0; j < Frame.NB_PIXELS; j++) {
                 int x = PANEL_MARGIN + i * (PIXEL_SIZE + PIXEL_MARGIN);
                 int y = PANEL_MARGIN + j * (PIXEL_SIZE + PIXEL_MARGIN);
                 callable.draw(g2d, i, j, x, y, this);
@@ -130,7 +133,7 @@ public class ImagePanel extends JPanel{
         private void updateMouseCursor(int x, int y){
             if(isMouseIn){
                 int[] xy = findPixelIndices(x, y);
-                if(xy[0]<this.parent.getNbPixels() && xy[1]<this.parent.getNbPixels()){
+                if(xy[0]<Frame.NB_PIXELS && xy[1]<Frame.NB_PIXELS){
                     setCursor(precisionCursor);
                 } else {
                     setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
@@ -142,7 +145,7 @@ public class ImagePanel extends JPanel{
 
         private void doMouse(MouseEvent e) {
             int[] xy = findPixelIndices(e.getX(), e.getY());
-            if(xy[0]<this.parent.getNbPixels() && xy[1]<this.parent.getNbPixels()){
+            if(xy[0]<Frame.NB_PIXELS && xy[1]<Frame.NB_PIXELS){
                 boolean shiftPressed = (e.getModifiers() & KeyEvent.SHIFT_MASK) != 0;
                 boolean ctrlPressed = (e.getModifiers() & KeyEvent.CTRL_MASK) != 0;
                 boolean altPressed = (e.getModifiers() & KeyEvent.ALT_MASK) != 0;

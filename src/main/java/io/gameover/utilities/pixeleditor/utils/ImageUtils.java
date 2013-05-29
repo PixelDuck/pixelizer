@@ -10,29 +10,38 @@
  * Except as contained in this notice, the name of the copyright holders shall not be used in advertising or otherwise to promote the sale, use or other dealings in this Software without prior written authorization from the copyright holders.
  */
 
-package io.gameover.utilities.pixeleditor;
+package io.gameover.utilities.pixeleditor.utils;
 
-import java.awt.Cursor;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
+import io.gameover.utilities.pixeleditor.Frame;
+
+import java.awt.image.BufferedImage;
 
 /**
  * Created with IntelliJ IDEA.
  * User: MRS.OMARTIN
- * Date: 23/05/13
- * Time: 07:20
+ * Date: 28/05/13
+ * Time: 09:32
  * To change this template use File | Settings | File Templates.
  */
-public final class SwingUtils {
+public final class ImageUtils {
 
-    private SwingUtils(){
+    private ImageUtils(){
 
     }
 
-    public static Cursor createCursor(String imgPath, int hotSpotX, int hotSpotY, String name){
-        Toolkit toolkit = Toolkit.getDefaultToolkit();
-        Image image = toolkit.getImage(SwingUtils.class.getResource(imgPath));
-        return toolkit.createCustomCursor(image , new Point(16, 16), name);
+    public static String toAlphaMask(BufferedImage image){
+        //debugging import
+        StringBuilder sb = new StringBuilder();
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                if(x%32==0){
+                    sb.append("|");
+                }
+                sb.append(image.getRGB(x, y)== Frame.NO_COLOR_AS_INT?" ":"#");
+            }
+            sb.append('\n');
+        }
+        sb.append('\n');
+        return sb.toString();
     }
 }

@@ -12,34 +12,23 @@
 
 package io.gameover.utilities.pixeleditor;
 
-import java.awt.GridBagConstraints;
-import java.awt.Insets;
-
 /**
- * Layout utils.
- */
-public final class LayoutUtils {
+* State for a frame with selection mask.
+*/
+public class State {
+    private final Frame frame;
+    private final boolean[][] selectionMask;
 
-    private LayoutUtils(){
-
+    public State(Frame frame, boolean[][] selectionMask) {
+        this.frame = frame;
+        this.selectionMask = selectionMask;
     }
 
-    public static GridBagConstraints xyi(int x, int y, double wx, double wy, Insets i){
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx=x;
-        gbc.gridy=y;
-        gbc.weightx = wx;
-        gbc.weighty = wy;
-        gbc.insets=i;
-        gbc.fill = 1;
-        return gbc;
+    public Frame getFrame() {
+        return frame;
     }
 
-    public static GridBagConstraints xywi(int x, int y, int gw, double wx, double wy, Insets i){
-        GridBagConstraints gbc = xyi(x, y, wx, wy, i);
-        gbc.gridwidth=gw;
-        return gbc;
+    public boolean[][] getSelectionMask() {
+        return selectionMask;
     }
-
-
 }

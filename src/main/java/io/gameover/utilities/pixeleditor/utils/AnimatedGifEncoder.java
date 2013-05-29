@@ -1,6 +1,6 @@
 package io.gameover.utilities.pixeleditor.utils;
 
-import io.gameover.utilities.pixeleditor.Pixelizer;
+import io.gameover.utilities.pixeleditor.Frame;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -482,7 +482,7 @@ public class AnimatedGifEncoder implements Encoder {
     }
 
     @Override
-    public void saveImage(File f, List<Pixelizer.Frame> frames) throws IOException {
+    public void saveImage(File f, List<Frame> frames) throws IOException {
         FileOutputStream fileOutputStream = new FileOutputStream(f);
         try{
             setDelay(250);
@@ -490,7 +490,7 @@ public class AnimatedGifEncoder implements Encoder {
             Color transparent = new Color(255,130, 255);
             setTransparent(transparent);
             if(start(fileOutputStream)){
-                for(Pixelizer.Frame frame : frames){
+                for(Frame frame : frames){
                     addFrame(frame.getAsBufferedImage(transparent));
                 }
                 finish();

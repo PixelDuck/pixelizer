@@ -1,6 +1,6 @@
 package io.gameover.utilities.pixeleditor.utils;
 
-import io.gameover.utilities.pixeleditor.Pixelizer;
+import io.gameover.utilities.pixeleditor.Frame;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,5 +11,5 @@ import java.util.List;
  */
 public interface Encoder {
 
-    void saveImage(File f, List<Pixelizer.Frame> frames) throws IOException;
+    void saveImage(File f, List<Frame> frames) throws IOException;
 }

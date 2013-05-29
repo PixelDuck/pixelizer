@@ -1,5 +1,6 @@
 package io.gameover.utilities.pixeleditor;
 
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import junit.framework.Assert;
 import org.junit.Test;
 

@@ -14,7 +14,9 @@ package io.gameover.utilities.pixeleditor;
 
 import io.gameover.utilities.pixeleditor.colorchooser.ColorChooserPanel;
 import io.gameover.utilities.pixeleditor.utils.AnimatedGifEncoder;
+import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import io.gameover.utilities.pixeleditor.utils.Encoder;
+import io.gameover.utilities.pixeleditor.utils.LayoutUtils;
 import io.gameover.utilities.pixeleditor.utils.PngEncoder;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
 
@@ -24,10 +26,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -40,9 +39,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
-import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -56,8 +53,6 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 public class Pixelizer extends JFrame {
 
     private static final long serialVersionUID = 1L;
-
-	private static final int NB_PIXELS = 32;
 
     public static final String ACTION_OPEN = "open";
     public static final String ACTION_SAVE_AS_PNG = "save_as_PNG";
@@ -96,7 +91,7 @@ public class Pixelizer extends JFrame {
         frames = new ArrayList<>();
         frames.add(new Frame());
         currentFrameIndex = 0;
-        selectionMask = new boolean[NB_PIXELS][NB_PIXELS];
+        selectionMask = new boolean[Frame.NB_PIXELS][Frame.NB_PIXELS];
         reset();
         applyLookAndFeel();
         setTitle("Pixelizer");
@@ -114,6 +109,10 @@ public class Pixelizer extends JFrame {
         setSize(new Dimension(800, 700));
         centerFrame();
         setVisible(true);
+        refresh();
+    }
+
+    private void refresh() {
         ((JPanel)getContentPane()).updateUI();
     }
 
@@ -191,10 +190,6 @@ public class Pixelizer extends JFrame {
         return toleranceBar;
     }
 
-    public int getNbPixels() {
-        return NB_PIXELS;
-    }
-
     public List<Frame> getPixelFrames() {
         return frames;
     }
@@ -257,126 +252,25 @@ public class Pixelizer extends JFrame {
         @Override
         public void actionPerformed(ActionEvent e) {
             int index = Integer.parseInt(e.getActionCommand());
-            for(int i=0; i<this.parent.frames.size(); i++){
-                JToggleButton button = this.parent.selectFrameButtons.get(i);
-                if(i!=index && button.isSelected()){
-                    button.setSelected(false);
-                }
-            }
             this.parent.selectFrame(index);
         }
     }
 
     private void selectFrame(int index) {
         if(index>=0 && index<frames.size()){
-            this.selectFrameButtons.get(currentFrameIndex).setSelected(false);
             this.currentFrameIndex=index;
             clearSelection();
             this.savedStates.clear();
-            this.selectFrameButtons.get(index).setSelected(true);
-            repaint();
-            getSelectFramePanel().updateUI();
-        }
-    }
-
-    public static class Frame {
-        public static final int NO_COLOR_AS_INT = 0x00000000;
-
-        private int[][] argb;
-
-        public Frame(){
-            reset();
-        }
-
-        public void reset() {
-            argb = new int[NB_PIXELS][NB_PIXELS];
-            for(int i=0; i< argb.length; i++){
-                for(int j=0; j< argb[0].length; j++){
-                    argb[i][j] = NO_COLOR_AS_INT;
+            currentStateIndex = 0;
+            for(int i=0; i<this.frames.size(); i++){
+                JToggleButton button = this.selectFrameButtons.get(i);
+                if(i!=index && button.isSelected()){
+                    button.setSelected(false);
+                } else if(i==index && !button.isSelected()){
+                    button.setSelected(true);
                 }
             }
-        }
-
-        public int getColor(int i, int j){
-            return argb[i][j];
-        }
-
-        public int getWidth(){
-            return argb.length;
-        }
-
-        public int getHeight(){
-            return argb[0].length;
-        }
-
-        public void setColor(int i, int j, int color){
-            argb[i][j] = color;
-        }
-
-        public Frame clone(){
-            Frame p = new Frame();
-            p.argb = Utilities.copyArray(argb);
-            return p;
-        }
-
-        public void fillColor(int x, int y, int newColor, int tolerance) {
-            List<Point> points = findPoint(x, y, tolerance);
-            for(Point p : points){
-                setColor(p.x, p.y, newColor);
-            }
-        }
-
-        public List<Point> findPoint(int x, int y, int tolerance) {
-            int color = getColor(x, y);
-            Set<Point> scanned = new HashSet<>();
-            List<Point> ret = new ArrayList<>();
-            findPointAux(x, y, color, tolerance, ret, scanned);
-            return ret;
-        }
-
-        private void findPointAux(int x, int y, int color, int tolerance, List<Point> ret, Set<Point> scanned) {
-            Point p = new Point(x, y);
-            if(!scanned.contains(p)){
-                scanned.add(p);
-                if(x>=0 && x<argb.length
-                        && y>=0 && y<argb[0].length
-                        && isColorClosed(getColor(x,y), color, tolerance)){
-                    ret.add(p);
-                    findPointAux(x-1, y, color, tolerance, ret, scanned);
-                    findPointAux(x+1, y, color, tolerance, ret, scanned);
-                    findPointAux(x, y-1, color, tolerance, ret, scanned);
-                    findPointAux(x, y+1, color, tolerance, ret, scanned);
-                }
-            }
-        }
-
-        private boolean isColorClosed(int color1, int color2, int tolerance) {
-            int t = 256*tolerance/100;
-            int[] argb1 = ColorUtils.extractARGB(color1);
-            int[] argb2 = ColorUtils.extractARGB(color2);
-            boolean ok = true;
-            for(int i=0; i<4;i++){
-                ok &= ((argb1[i]-t) < argb2[i] && argb2[i]< (argb1[i]+t));
-            }
-            return ok;
-        }
-
-        public BufferedImage getAsBufferedImage(){
-            return getAsBufferedImage(null);
-        }
-
-        public BufferedImage getAsBufferedImage(Color transparent){
-            BufferedImage bi = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-            for(int i=0; i<bi.getWidth(); i++){
-                for(int j=0; j<bi.getHeight(); j++){
-                    if(transparent!=null && argb[i][j]==NO_COLOR_AS_INT){
-                        bi.setRGB(i, j, transparent.getRGB());
-                    } else {
-                        bi.setRGB(i, j, argb[i][j]);
-                    }
-                }
-            }
-            return bi;
+            refresh();
         }
     }
 
@@ -499,7 +393,7 @@ public class Pixelizer extends JFrame {
         this.frames.add(index, f);
         this.currentFrameIndex = index;
         this.selectFramePanel.add(createSelectFrameButton(this.frames.size()), LayoutUtils.xyi(frames.size() % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
-        ((JPanel)getContentPane()).updateUI();
+        refresh();
     }
 
     private JToggleButton createSelectFrameButton(int index) {
@@ -525,7 +419,7 @@ public class Pixelizer extends JFrame {
         } else {
             actionClearChange();
         }
-        ((JPanel)getContentPane()).updateUI();
+        refresh();
     }
 
     public ImagePanel getImagePanel() {
@@ -578,7 +472,7 @@ public class Pixelizer extends JFrame {
     }
 
     private void restorePreviousState(){
-        if(currentStateIndex >0){
+        if(currentStateIndex>0){
             currentStateIndex--;
             this.frames.remove(currentFrameIndex);
             State state = savedStates.get(currentStateIndex);
@@ -649,11 +543,11 @@ public class Pixelizer extends JFrame {
 
 
 //	public int getImageWidth() {
-//		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
+//		return (PIXEL_SIZE + MARGIN) * Frame.NB_PIXELS + MARGIN;
 //	}
 //
 //	public int getImageHeight() {
-//		return (PIXEL_SIZE + MARGIN) * NB_PIXELS + MARGIN;
+//		return (PIXEL_SIZE + MARGIN) * Frame.NB_PIXELS + MARGIN;
 //	}
 
 
@@ -668,7 +562,7 @@ public class Pixelizer extends JFrame {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			if (e.getActionCommand().equals(ACTION_OPEN)) {
-				this.parent.actionOpenFile();
+				this.parent.openFile();
 			} else if (e.getActionCommand().equals(ACTION_SAVE_AS_PNG)) {
                 this.parent.actionSaveAsPNG();
             } else if (e.getActionCommand().equals(ACTION_SAVE_AS_GIF)) {
@@ -692,7 +586,7 @@ public class Pixelizer extends JFrame {
 
 	public void doFirstActionTool(int i, int j, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
         requestFocus();
-        if (NB_PIXELS > i && NB_PIXELS > j) {
+        if (Frame.NB_PIXELS > i && Frame.NB_PIXELS > j) {
             switch(toolSelected){
                 case PEN:
                     clearSelection();
@@ -800,10 +694,10 @@ public class Pixelizer extends JFrame {
 	public void convertToPixelImage(BufferedImage image) {
 		if (image != null) {
             actionClearChange();
-			int nbImgPixelPerHPixel = image.getWidth() / NB_PIXELS;
-			int nbImgPixelPerVPixel = image.getHeight() / NB_PIXELS;
-			for (int h = 0; h < NB_PIXELS; h++) {
-				for (int v = 0; v < NB_PIXELS; v++) {
+			int nbImgPixelPerHPixel = image.getWidth() / Frame.NB_PIXELS;
+			int nbImgPixelPerVPixel = image.getHeight() / Frame.NB_PIXELS;
+			for (int h = 0; h < Frame.NB_PIXELS; h++) {
+				for (int v = 0; v < Frame.NB_PIXELS; v++) {
 					int count = 0;
                     long sumA=0, sumR=0, sumG=0, sumB=0;
 					for (int x = h * nbImgPixelPerHPixel; x < (h + 1)
@@ -841,6 +735,7 @@ public class Pixelizer extends JFrame {
 
 	public void actionClearChange() {
         savedStates.clear();
+        currentStateIndex=0;
 		reset();
 		this.imagePanel.repaint();
 	}
@@ -849,39 +744,52 @@ public class Pixelizer extends JFrame {
 		new Pixelizer();
 	}
 
-	public void actionOpenFile() {
+	public void openFile() {
 		JFileChooser fc = new JFileChooser();
 		int ret = fc.showOpenDialog(this);
 		if (ret == JFileChooser.APPROVE_OPTION) {
             try {
                 BufferedImage image = ImageIO.read(fc.getSelectedFile());
-                if(image.getHeight()>NB_PIXELS || image.getWidth()%NB_PIXELS!=0 || image.getHeight()!=NB_PIXELS){
-                    int retOption = JOptionPane.showConfirmDialog(this, "Image seems not a pixel image (height > " + NB_PIXELS+ "px or length not a multiple of "+NB_PIXELS+"). Would you like to convert it to pixel?");
+                if(image.getHeight()>Frame.NB_PIXELS || image.getWidth()%Frame.NB_PIXELS!=0 || image.getHeight()!=Frame.NB_PIXELS){
+                    int retOption = JOptionPane.showConfirmDialog(this, "Image seems not a pixel image (height > " + Frame.NB_PIXELS+ "px or length not a multiple of "+Frame.NB_PIXELS+"). Would you like to convert it to pixel?");
                     if(retOption == JOptionPane.OK_OPTION){
                         convertToPixelImage(image);
                     }
                 } else {
-                    int nb = image.getWidth()/NB_PIXELS;
-                    this.frames = new ArrayList<>(nb);
-                    this.currentFrameIndex = 0;
-                    for(int c=0; c<nb; c++){
-                        Frame p = new Frame();
-                        this.frames.add(p);
-                        for (int x = 0; x < NB_PIXELS; x++) {
-                            for (int y = 0; y < NB_PIXELS; y++) {
-                                p.setColor(x, y,  image.getRGB(x + c*NB_PIXELS, y));
-                            }
-                        }
-                    }
-                    fillPanelWithButton(nb);
+                    openImage(image);
                 }
+                savedStates.clear();
+                currentStateIndex = 0;
                 clearSelection();
-                repaint();
+                refresh();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
 		}
 	}
+
+    private void openImage(BufferedImage image) {
+        int nb = image.getWidth() / Frame.NB_PIXELS;
+        if(image.getWidth()%Frame.NB_PIXELS!=0){
+            throw new IllegalArgumentException("image width is not a multiple of "+Frame.NB_PIXELS);
+        }
+
+        this.frames = new ArrayList<>(nb);
+        this.currentFrameIndex = 0;
+        for(int f = 0; f < nb; f++){
+            Frame frame = new Frame();
+            for (int x = 0; x < Frame.NB_PIXELS; x++) {
+                for (int y = 0; y < Frame.NB_PIXELS; y++) {
+                    int ix = x + f * Frame.NB_PIXELS;
+                    int iy = y;
+                    int c = image.getRGB(ix, iy);
+                    frame.setColor(x, y, c);
+                }
+            }
+            this.frames.add(frame);
+        }
+        fillPanelWithButton(nb);
+    }
 
     public void actionSaveAsPNG(){
         saveImage("PNG file", "png", new PngEncoder());
@@ -949,24 +857,7 @@ public class Pixelizer extends JFrame {
         this.toolSelected.getButton().setSelected(false);
         this.toolSelected = t;
         t.getButton().setSelected(true);
-        ((JPanel)this.getContentPane()).updateUI();
+        refresh();
     }
 
-    private static class State{
-        private final Frame frame;
-        private final boolean[][] selectionMask;
-
-        private State(Frame frame, boolean[][] selectionMask) {
-            this.frame = frame;
-            this.selectionMask = selectionMask;
-        }
-
-        private Frame getFrame() {
-            return frame;
-        }
-
-        private boolean[][] getSelectionMask() {
-            return selectionMask;
-        }
-    }
 }

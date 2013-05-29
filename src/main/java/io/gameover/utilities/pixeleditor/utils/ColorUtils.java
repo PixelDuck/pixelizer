@@ -1,7 +1,6 @@
-package io.gameover.utilities.pixeleditor;
+package io.gameover.utilities.pixeleditor.utils;
 
 import java.awt.Color;
-import java.awt.Paint;
 
 /**
  * Utilities class for all color conversions.
