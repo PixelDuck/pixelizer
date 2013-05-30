@@ -15,8 +15,9 @@ public enum Tool {
     PEN("/draw-freehand.png", "<html>Key: 'P'<br>Left click to draw<br>Right click to select color<br>Middle click to delete</html>", KeyEvent.VK_P),
     FILL("/color-fill.png", "<html>Key: 'F'</html>", KeyEvent.VK_F),
     CLEAR("/draw-eraser.png", "<html>Key: 'X'</html>", KeyEvent.VK_X),
-    SELECT("/select-continuous-area.png", "<html>Key: 'S'<br>Left click to select<br>Right click to deselect</html>", KeyEvent.VK_S),
-    MAGIC_WAND("/select-lasso.png", "<html>Key: 'W'</html>", KeyEvent.VK_W),
+    SELECT_POINT("/select-lasso.png", "<html>Key: 'S'<br>Left click to select<br>Right click to deselect</html>", KeyEvent.VK_S),
+    SELECT_AREA("/select-rectangular.png", "<html>Key: 'S'<br>Left click to select an area<br>Right click to deselect</html>", KeyEvent.VK_S),
+    MAGIC_WAND("/select-continuous-area.png", "<html>Key: 'W'</html>", KeyEvent.VK_S),
     MOVE("/transform-move.png", "<html>Key: 'M'</html>", KeyEvent.VK_M);
 
     private JToggleButton button;

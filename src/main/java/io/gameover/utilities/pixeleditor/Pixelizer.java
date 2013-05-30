@@ -26,7 +26,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -81,6 +83,7 @@ public class Pixelizer extends JFrame {
     private List<JToggleButton> selectFrameButtons;
     private ActionListener selectFrameActionListener;
     private JPanel animation;
+    private Frame frameCopied;
 
     /**
      * Constructor.
@@ -275,6 +278,7 @@ public class Pixelizer extends JFrame {
     }
 
     private void clearSelection(){
+        this.frameCopied = null;
         for(int i=0; i<selectionMask.length; i++){
             for(int j=0; j<selectionMask[0].length; j++){
                 selectionMask[i][j] = false;
@@ -373,14 +377,10 @@ public class Pixelizer extends JFrame {
         this.selectFramePanel.removeAll();
         this.selectFrameButtons.clear();
         for(int i=0; i<nbFrames; i++){
-            addSelectFrameButtonToPanel(i, createSelectFrameButton(i + 1));
+            addSelectFrameButtonToPanel(i+1);
         }
         selectFrameButtons.get(0).setSelected(true);
-        this.selectFramePanel.updateUI();
-    }
-
-    public void addSelectFrameButtonToPanel(int index, JToggleButton btn){
-        this.selectFramePanel.add(btn, LayoutUtils.xyi(index % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
+        refresh();
     }
 
     public void insertNewFrame(int index, int copyIndex){
@@ -392,21 +392,26 @@ public class Pixelizer extends JFrame {
         }
         this.frames.add(index, f);
         this.currentFrameIndex = index;
-        this.selectFramePanel.add(createSelectFrameButton(this.frames.size()), LayoutUtils.xyi(frames.size() % 4 + 1, index / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
+        addSelectFrameButtonToPanel();
+        selectFrame(index);
         refresh();
     }
 
-    private JToggleButton createSelectFrameButton(int index) {
+    private void addSelectFrameButtonToPanel() {
+        addSelectFrameButtonToPanel(frames.size());
+    }
+
+    private void addSelectFrameButtonToPanel(int index) {
         JToggleButton button = new JToggleButton(""+index);
         button.setPreferredSize(new Dimension(20,20));
         button.setMargin(new Insets(0, 0, 0, 0));
         button.setFont(button.getFont().deriveFont(9f));
-        button.setActionCommand("" + (index - 1));
+        button.setActionCommand("" + (index-1));
         button.addActionListener(
                 getSelectFrameActionListener());
         button.addMouseListener(new SelectFramePopClickListener(this, index-1));
         this.selectFrameButtons.add(button);
-        return button;
+        this.selectFramePanel.add(button, LayoutUtils.xyi((index-1) % 4 + 1, (index-1) / 4 + 1, 0d, 0d, new Insets(1, 1, 1, 1)));
     }
 
     public void removeFrame(int index){
@@ -415,7 +420,8 @@ public class Pixelizer extends JFrame {
                 currentFrameIndex--;
             }
             this.frames.remove(index);
-            this.selectFramePanel.remove(index);
+            JToggleButton btnRemoved = this.selectFrameButtons.remove(frames.size());
+            this.selectFramePanel.remove(btnRemoved);
         } else {
             actionClearChange();
         }
@@ -443,7 +449,7 @@ public class Pixelizer extends JFrame {
         public void actionPerformed(ActionEvent e) {
             Tool toolSelected = Tool.valueOf(e.getActionCommand());
             if(toolSelected!=this.parent.toolSelected){
-                if(toolSelected!=Tool.MAGIC_WAND&&toolSelected!=Tool.SELECT){
+                if(toolSelected!=Tool.MAGIC_WAND&&toolSelected!=Tool.SELECT_POINT){
                     parent.clearSelection();
                 }
                 this.parent.toolSelected.getButton().setSelected(false);
@@ -605,7 +611,7 @@ public class Pixelizer extends JFrame {
                     break;
                 case MOVE:
                     break;
-                case SELECT:
+                case SELECT_POINT:
                     this.selectionMask[i][j] = true;
                     repaint();
                     break;
@@ -637,7 +643,7 @@ public class Pixelizer extends JFrame {
                 break;
             case MOVE:
                 break;
-            case SELECT:
+            case SELECT_POINT:
                 this.selectionMask[x][y] = false;
                 repaint();
                 break;
@@ -656,7 +662,7 @@ public class Pixelizer extends JFrame {
             case CLEAR:
             case MAGIC_WAND:
             case MOVE:
-            case SELECT:
+            case SELECT_POINT:
                 //TODO
                 break;
             default:
@@ -823,7 +829,7 @@ public class Pixelizer extends JFrame {
 
         @Override
         public void keyReleased(KeyEvent e) {
-            System.out.println(e);
+//            System.out.println(e);
             if(e.getKeyCode()>=KeyEvent.VK_1 && e.getKeyCode()<=KeyEvent.VK_9 && (e.getModifiers() & KeyEvent.ALT_MASK) != 0){
                 int frame = e.getKeyCode()-KeyEvent.VK_1;
                 this.parent.selectFrame(frame);
@@ -835,14 +841,45 @@ public class Pixelizer extends JFrame {
                 this.parent.deleteSelection();
             } else if(e.getKeyCode()==KeyEvent.VK_A && (e.getModifiers() & KeyEvent.CTRL_MASK) != 0){
                 this.parent.selectAll();
+            } else if(e.getKeyCode()==KeyEvent.VK_ESCAPE){
+                if(this.parent.isSelectionModeActivated()){
+                    this.parent.clearSelection();
+                }
             } else {
+                Map<Integer, List<Tool>> keys = new HashMap<>();
                 for(Tool t : Tool.values()){
-                    if(t.getKeyStroke()==e.getKeyCode()){
-                        this.parent.selectTool(t);
+                    List<Tool> tools = keys.get(t.getKeyStroke());
+                    if(tools==null){
+                        tools = new ArrayList<>();
+                        keys.put(t.getKeyStroke(), tools);
+                    }
+                    tools.add(t);
+                }
+                List<Tool> tools = keys.get(e.getKeyCode());
+                if(tools!=null){
+                    if(tools.size()==1){
+                        this.parent.selectTool(tools.get(0));
+                    } else {
+                        boolean ok = false;
+                        for(int i=0; i<tools.size()&&!ok; i++){
+                            if(tools.get(i)==parent.toolSelected){
+                                this.parent.selectTool(tools.get((i+1)%tools.size()));
+                                ok = true;
+                            }
+                        }
+                        if(!ok){
+                            this.parent.selectTool(tools.get(0));
+                        }
                     }
                 }
             }
         }
+    }
+
+    private boolean isSelectionModeActivated() {
+        return toolSelected == Tool.MAGIC_WAND
+                || toolSelected==Tool.SELECT_POINT
+                || toolSelected==Tool.SELECT_AREA;
     }
 
     private void redo() {
@@ -854,6 +891,7 @@ public class Pixelizer extends JFrame {
     }
 
     private void selectTool(Tool t) {
+        System.out.println("select tool "+t);
         this.toolSelected.getButton().setSelected(false);
         this.toolSelected = t;
         t.getButton().setSelected(true);
