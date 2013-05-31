@@ -14,13 +14,18 @@ package io.gameover.utilities.pixeleditor;
 
 import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
+import javafx.util.Pair;
 
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -48,6 +53,31 @@ public class Frame {
                 argb[i][j] = NO_COLOR_AS_INT;
             }
         }
+    }
+
+    public List<Pair<Integer, Integer>> extractColors(){
+        Map<Integer, Integer> m = new HashMap<>();
+        for(int i=0; i< argb.length; i++){
+            for(int j=0; j< argb[0].length; j++){
+                int c = argb[i][j];
+                if(!m.containsKey(c)){
+                    m.put(c, 1);
+                } else {
+                    m.put(c, m.get(c)+1);
+                }
+            }
+        }
+        List<Pair<Integer, Integer>> ret = new ArrayList<>();
+        for(Integer k : m.keySet()){
+            ret.add(new Pair(k, m.get(k)));
+        }
+        Collections.sort(ret, new Comparator<Pair<Integer, Integer>>() {
+            @Override
+            public int compare(Pair<Integer, Integer> o1, Pair<Integer, Integer> o2) {
+                return o2.getValue()-o1.getValue();
+            }
+        });
+        return ret;
     }
 
     public int getColor(int i, int j){

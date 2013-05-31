@@ -19,6 +19,7 @@ import io.gameover.utilities.pixeleditor.utils.Encoder;
 import io.gameover.utilities.pixeleditor.utils.LayoutUtils;
 import io.gameover.utilities.pixeleditor.utils.PngEncoder;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
+import javafx.util.Pair;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -78,23 +80,28 @@ public class Pixelizer extends JFrame {
 
     private Point selectionPoint = new Point(0, 0);
     private boolean[][] selectionMask;
+    private boolean[][] enlightmentMask;
     private List<State> savedStates;
     private int currentStateIndex;
     private List<JToggleButton> selectFrameButtons;
     private ActionListener selectFrameActionListener;
     private JPanel animation;
     private Frame frameCopied;
+    private JPanel colorsPanel;
+    private List<ColorPanel> colorPanels;
 
     /**
      * Constructor.
      */
     public Pixelizer() {
         setFocusable(true);
+        setIconImage(new ImageIcon(getClass().getResource("/icon.png").getPath()).getImage());
         requestFocus();
         frames = new ArrayList<>();
         frames.add(new Frame());
         currentFrameIndex = 0;
         selectionMask = new boolean[Frame.NB_PIXELS][Frame.NB_PIXELS];
+        enlightmentMask = new boolean[Frame.NB_PIXELS][Frame.NB_PIXELS];
         reset();
         applyLookAndFeel();
         setTitle("Pixelizer");
@@ -221,6 +228,37 @@ public class Pixelizer extends JFrame {
         insertNewFrame(frameIndex, frameIndex);
     }
 
+    public ColorChooserPanel getColorChooser() {
+        if(colorChooser==null){
+            colorChooser = new ColorChooserPanel();
+        }
+        return colorChooser;
+    }
+
+    public JPanel getColorsPanel() {
+        if(colorsPanel ==null){
+            colorsPanel = new JPanel(new GridBagLayout());
+            this.colorPanels = new ArrayList<>();
+        }
+        return colorsPanel;
+    }
+
+
+
+    public void resizeColorPanels(int newSize){
+        if(newSize!=colorPanels.size()){
+            while(newSize>colorPanels.size()){
+                ColorPanel cp = new ColorPanel();
+                colorsPanel.add(cp, LayoutUtils.xyi(colorPanels.size() / 6 + 1, colorPanels.size() % 6 + 1, 0d, 0d, new Insets(2, 2, 2, 2)));
+                colorPanels.add(cp);
+            }
+            while(newSize<colorPanels.size()){
+                ColorPanel cp = colorPanels.remove(colorPanels.size()-1);
+                colorsPanel.remove(cp);
+            }
+        }
+    }
+
     public static class SelectFramePopClickListener extends MouseAdapter {
         private final Pixelizer parent;
         private final int frameIndex;
@@ -273,6 +311,7 @@ public class Pixelizer extends JFrame {
                     button.setSelected(true);
                 }
             }
+            refreshCurrentColors();
             refresh();
         }
     }
@@ -297,7 +336,8 @@ public class Pixelizer extends JFrame {
             }
         }
         clearSelection();
-        repaint();
+        refreshCurrentColors();
+        refresh();
     }
 
     private void selectAll(){
@@ -329,11 +369,12 @@ public class Pixelizer extends JFrame {
     }
 
     public JPanel getColorPanel() {
-        if(this.colorPanel==null){
-            this.colorPanel = new JPanel(new BorderLayout());
-            colorChooser = new ColorChooserPanel();
-            this.colorPanel.add(colorChooser, BorderLayout.CENTER);
-
+        if (this.colorPanel == null) {
+            this.colorPanel = new JPanel(new GridBagLayout());
+            this.colorPanel.add(getColorChooser(), LayoutUtils.xyi(1,1,0d,0d, new Insets(5,5,5,5)));
+            GridBagConstraints gbc = LayoutUtils.xyi(1, 2, 0d, 1d, new Insets(5, 5, 5, 5));
+            gbc.anchor = GridBagConstraints.NORTHWEST;
+            this.colorPanel.add(getColorsPanel(), gbc);
         }
         return colorPanel;
     }
@@ -595,30 +636,63 @@ public class Pixelizer extends JFrame {
         if (Frame.NB_PIXELS > i && Frame.NB_PIXELS > j) {
             switch(toolSelected){
                 case PEN:
-                    clearSelection();
-                    applyColor(i, j, this.colorChooser.getColor());
+                    if(altPressed){
+                        doClearColor(i, j);
+                    } else {
+                        doApplyColor(i, j);
+                    }
                     break;
                 case CLEAR:
-                    clearSelection();
-                    applyColor(i, j, Frame.NO_COLOR_AS_INT);
+                    doClearColor(i, j);
                     break;
                 case FILL:
-                    clearSelection();
-                    fillColor(i, j, this.colorChooser.getColor());
+                    doFillColor(i, j);
                     break;
                 case MAGIC_WAND:
-                    changeSelectionNearPoint(i, j, true);
+                    doSelectNear(i, j);
                     break;
                 case MOVE:
+                    doMoveSelection(i, j);
                     break;
                 case SELECT_POINT:
-                    this.selectionMask[i][j] = true;
-                    repaint();
+                    doSelect(i, j, true);
                     break;
                 default:
                     break;
             }
         }
+    }
+
+    private void doSelect(int i, int j, boolean isSelected) {
+        this.selectionMask[i][j] = true;
+        repaint();
+    }
+
+    private void doMoveSelection(int i, int j) {
+        //TODO
+        refreshCurrentColors();
+    }
+
+    private void doSelectNear(int i, int j) {
+        changeSelectionNearPoint(i, j, true);
+    }
+
+    private void doFillColor(int i, int j) {
+        clearSelection();
+        fillColor(i, j, this.colorChooser.getColor());
+        refreshCurrentColors();
+    }
+
+    private void doClearColor(int i, int j) {
+        clearSelection();
+        applyColor(i, j, Frame.NO_COLOR_AS_INT);
+        refreshCurrentColors();
+    }
+
+    private void doApplyColor(int i, int j) {
+        clearSelection();
+        applyColor(i, j, this.colorChooser.getColor());
+        refreshCurrentColors();
     }
 
     private void changeSelectionNearPoint(int x, int y, boolean select) {
@@ -636,27 +710,30 @@ public class Pixelizer extends JFrame {
             case PEN:
             case FILL:
             case CLEAR:
-                updateColorChooser(x, y);
+                doUpdateColorSelected(x, y);
                 break;
             case MAGIC_WAND:
-                changeSelectionNearPoint(x, y, true);
+                doSelectNear(x, y);
                 break;
             case MOVE:
                 break;
             case SELECT_POINT:
-                this.selectionMask[x][y] = false;
-                repaint();
+                doSelect(x, y, false);
                 break;
             default:
                 break;
         }
     }
 
+    private void doUpdateColorSelected(int x, int y) {
+        updateColorChooser(x, y);
+    }
+
     public void doThirdActionTool(int x, int y, boolean shiftPressed, boolean ctrlPressed, boolean altPressed) {
         requestFocus();
         switch(toolSelected){
             case PEN:
-                applyColor(x, y, Frame.NO_COLOR_AS_INT);
+                doClearColor(x, y);
                 break;
             case FILL:
             case CLEAR:
@@ -764,6 +841,7 @@ public class Pixelizer extends JFrame {
                 } else {
                     openImage(image);
                 }
+                refreshCurrentColors();
                 savedStates.clear();
                 currentStateIndex = 0;
                 clearSelection();
@@ -773,6 +851,15 @@ public class Pixelizer extends JFrame {
             }
 		}
 	}
+
+    private void refreshCurrentColors() {
+        List<Pair<Integer,Integer>> colors = frames.get(currentFrameIndex).extractColors();
+        resizeColorPanels(colors.size());
+        for(int i=0; i<colors.size(); i++){
+            colorPanels.get(i).setColor(colors.get(i).getKey());
+        }
+        refresh();
+    }
 
     private void openImage(BufferedImage image) {
         int nb = image.getWidth() / Frame.NB_PIXELS;
@@ -829,7 +916,6 @@ public class Pixelizer extends JFrame {
 
         @Override
         public void keyReleased(KeyEvent e) {
-//            System.out.println(e);
             if(e.getKeyCode()>=KeyEvent.VK_1 && e.getKeyCode()<=KeyEvent.VK_9 && (e.getModifiers() & KeyEvent.ALT_MASK) != 0){
                 int frame = e.getKeyCode()-KeyEvent.VK_1;
                 this.parent.selectFrame(frame);
@@ -884,10 +970,12 @@ public class Pixelizer extends JFrame {
 
     private void redo() {
         restoreNextState();
+        refreshCurrentColors();
     }
 
     private void undo() {
         restorePreviousState();
+        refreshCurrentColors();
     }
 
     private void selectTool(Tool t) {

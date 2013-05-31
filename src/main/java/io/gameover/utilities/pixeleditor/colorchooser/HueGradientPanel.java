@@ -38,7 +38,7 @@ import java.util.List;
 public class HueGradientPanel extends JPanel implements Observable<HueChangeEvent>{
 
     private static final float SATURATION = 0.7f;
-    private static final float VALUE = 0.95f;
+    private static final float VALUE = 0.7f;
     private static final int MARGIN = 3;
     private static final int HEIGHT = 180;
     private static final float HEIGHT_AS_FLOAT = (float)HEIGHT;
