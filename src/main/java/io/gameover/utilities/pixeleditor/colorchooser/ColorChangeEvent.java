@@ -16,13 +16,19 @@ package io.gameover.utilities.pixeleditor.colorchooser;
  * Color change event.
  */
 public class ColorChangeEvent {
-    public final int argb;
+    private final Object source;
+    private final int argb;
 
-    public ColorChangeEvent(int argb) {
+    public ColorChangeEvent(Object source, int argb) {
+        this.source = source;
         this.argb = argb;
     }
 
     public int getColor() {
         return argb;
+    }
+
+    public Object getSource(){
+        return source;
     }
 }

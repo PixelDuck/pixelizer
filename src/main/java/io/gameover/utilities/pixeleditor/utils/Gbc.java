@@ -17,45 +17,69 @@ import java.awt.Insets;
 
 /**
  * Layout utils.
- *
- * @depracted use {@link Gbc} instead
  */
-public final class LayoutUtils {
+public class Gbc {
+    GridBagConstraints gbc;
 
-    private LayoutUtils(){
-
+    public Gbc(int x, int y){
+        gbc = new GridBagConstraints();
+        gbc.gridx = x;
+        gbc.gridy = y;
+        gbc.weightx = 0d;
+        gbc.weighty = 0d;
+        gbc.insets=new Insets(2,2,2,2);
+        gbc.anchor = GridBagConstraints.NORTHWEST;
     }
 
-    public static GridBagConstraints xyi(int x, int y, double wx, double wy, Insets i){
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx=x;
-        gbc.gridy=y;
+    public GridBagConstraints toGbc(){
+        return gbc;
+    }
+
+    public Gbc wxy(double wx, double wy){
         gbc.weightx = wx;
         gbc.weighty = wy;
+        return this;
+    }
+
+    public Gbc i(Insets i){
         gbc.insets=i;
-        //gbc.fill = 1;
-        gbc.anchor = GridBagConstraints.NORTHWEST;
-        return gbc;
+        return this;
     }
 
-    public static GridBagConstraints xywi(int x, int y, int gw, double wx, double wy, Insets i){
-        GridBagConstraints gbc = xyi(x, y, wx, wy, i);
-        gbc.gridwidth=gw;
-        return gbc;
+    public Gbc f(int fill){
+          gbc.fill = fill;
+        return this;
     }
 
-    public static GridBagConstraints xyhi(int x, int y, int gh, double wx, double wy, Insets i){
-        GridBagConstraints gbc = xyi(x, y, wx, wy, i);
-        gbc.gridheight=gh;
-        return gbc;
+    public Gbc a(int anchor){
+        gbc.anchor = anchor;
+        return this;
     }
 
-    public static GridBagConstraints xywhi(int x, int y, int gw, int gh, double wx, double wy, Insets i){
-        GridBagConstraints gbc = xyi(x, y, wx, wy, i);
-        gbc.gridwidth=gw;
-        gbc.gridheight=gh;
-        return gbc;
+    public Gbc ar(){
+        return a(GridBagConstraints.EAST);
     }
 
+    public Gbc al(){
+        return a(GridBagConstraints.WEST);
+    }
+
+    public Gbc atl(){
+        return a(GridBagConstraints.NORTHWEST);
+    }
+
+    public Gbc atr(){
+        return a(GridBagConstraints.NORTHEAST);
+    }
+
+    public Gbc gw(int gridWidth){
+        gbc.gridwidth = gridWidth;
+        return this;
+    }
+
+    public Gbc gh(int gridHeight){
+        gbc.gridheight = gridHeight;
+        return this;
+    }
 
 }

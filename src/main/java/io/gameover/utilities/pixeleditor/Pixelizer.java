@@ -16,10 +16,11 @@ import io.gameover.utilities.pixeleditor.colorchooser.ColorChooserPanel;
 import io.gameover.utilities.pixeleditor.utils.AnimatedGifEncoder;
 import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import io.gameover.utilities.pixeleditor.utils.Encoder;
+import io.gameover.utilities.pixeleditor.utils.Gbc;
 import io.gameover.utilities.pixeleditor.utils.LayoutUtils;
 import io.gameover.utilities.pixeleditor.utils.PngEncoder;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -509,9 +510,9 @@ public class Pixelizer extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         Insets insets = new Insets(2, 2, 2 ,2);
 
-        mainPanel.add(getAnimationPanel(), LayoutUtils.xywi(1, 1, 3, 1.0d, 0.0d, insets));
-        mainPanel.add(getToolsPanel(), LayoutUtils.xyi(1, 2, 0.0d, 0.0d, insets));
-        mainPanel.add(getImagePanel(), LayoutUtils.xyi(2, 2, 1.0d, 1.0d, new Insets(5,5,5,5)));
+        mainPanel.add(getAnimationPanel(), new Gbc(1,1).gw(3).wxy(1d, 0d).i(insets).toGbc());
+        mainPanel.add(getToolsPanel(), new Gbc(1, 2).i(insets).toGbc());
+        mainPanel.add(getImagePanel(), new Gbc(2, 2).wxy(1d, 1d).i(new Insets(5,5,5,5)).f(1).toGbc());
         mainPanel.add(getColorPanel(), LayoutUtils.xyi(3, 2, 0.0d, 0.0d, insets));
         mainPanel.add(getTolerancePanel(), LayoutUtils.xyi(2, 3, 0.0d, 0.0d, insets));
 

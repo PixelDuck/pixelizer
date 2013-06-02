@@ -85,18 +85,24 @@ public class SaturationAndValueGradientPanel extends JPanel implements Observabl
     }
 
     private BufferedImage getBufferedImage(){
-        float hue = getHue();
-        if(!this.svImagePerHueValueMap.containsKey(hue)){
-            BufferedImage bi = new BufferedImage(PANEL_SIZE +1, PANEL_SIZE +1, BufferedImage.TYPE_INT_RGB);
+        float h = getHue();
+        BufferedImage bi =this.svImagePerHueValueMap.get(h);
+        if(bi==null){
+            bi = new BufferedImage(PANEL_SIZE +1, PANEL_SIZE +1, BufferedImage.TYPE_INT_ARGB);
+            int[] rgb = ColorUtils.extractRGB(ColorUtils.convertHSVToRGBAsInt(h, 0.95f, 095f));
+            System.out.println("[hue"+h+"]: r:"+rgb[0]+" g:"+rgb[2]+" b"+rgb[2]);
             for(int i=0; i<= PANEL_SIZE; i++){
                 for(int j=0; j<= PANEL_SIZE; j++){
-                    bi.setRGB(i, PANEL_SIZE -j,
-                            ColorUtils.convertHSVToRGBAsInt(hue, i / PANEL_SIZE_AS_FLOAT, j / PANEL_SIZE_AS_FLOAT));
+                    float s = (float)i / PANEL_SIZE_AS_FLOAT;
+                    float v = (float)j / PANEL_SIZE_AS_FLOAT;
+                    int c = ColorUtils.convertHSVToRGBAsInt(h, s, v);
+
+                    bi.setRGB(i, PANEL_SIZE -j, c);
                 }
             }
-            svImagePerHueValueMap.put(hue, bi);
+            svImagePerHueValueMap.put(h, bi);
         }
-        return this.svImagePerHueValueMap.get(hue);
+        return bi;
     }
 
     @Override

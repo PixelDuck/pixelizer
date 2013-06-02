@@ -37,8 +37,8 @@ import java.util.List;
  */
 public class HueGradientPanel extends JPanel implements Observable<HueChangeEvent>{
 
-    private static final float SATURATION = 0.7f;
-    private static final float VALUE = 0.7f;
+    private static final float SATURATION = 0.95f;
+    private static final float VALUE = 0.95f;
     private static final int MARGIN = 3;
     private static final int HEIGHT = 180;
     private static final float HEIGHT_AS_FLOAT = (float)HEIGHT;
@@ -71,7 +71,7 @@ public class HueGradientPanel extends JPanel implements Observable<HueChangeEven
             Graphics2D g2d = (Graphics2D)gradientImage.getGraphics();
             for(int j=0; j<=HEIGHT; j++){
                 float fj = j;
-                g2d.setPaint(new Color(ColorUtils.convertHSVToRGBAsInt((fj/360f) % 1.0f, SATURATION, VALUE)));
+                g2d.setPaint(new Color(ColorUtils.convertHSVToRGBAsInt((fj/HEIGHT) % 1.0f, SATURATION, VALUE)));
                 g2d.drawLine(0, j, WIDTH, j);
             }
             g2d.dispose();
@@ -143,6 +143,11 @@ public class HueGradientPanel extends JPanel implements Observable<HueChangeEven
         float h = (y-MARGIN)/HEIGHT_AS_FLOAT;
         this.hue = h;
         repaint();
+
+        int rgb = ColorUtils.convertHSVToRGBAsInt(hue, SATURATION, VALUE);
+        float[] hsv = ColorUtils.convertRGBToHSV(ColorUtils.extractRGB(rgb));
+        System.out.println("Hue change; "+this.hue+" recompute: "+hsv[0]);
+
         if(observers.size()>0){
             for (Observer<HueChangeEvent> observer : observers) {
                 observer.notify(new HueChangeEvent(h));

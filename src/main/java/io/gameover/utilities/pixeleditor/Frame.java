@@ -14,7 +14,7 @@ package io.gameover.utilities.pixeleditor;
 
 import io.gameover.utilities.pixeleditor.utils.ColorUtils;
 import io.gameover.utilities.pixeleditor.utils.Utilities;
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.awt.Color;
 import java.awt.Point;
@@ -69,7 +69,7 @@ public class Frame {
         }
         List<Pair<Integer, Integer>> ret = new ArrayList<>();
         for(Integer k : m.keySet()){
-            ret.add(new Pair(k, m.get(k)));
+            ret.add(Pair.of(k, m.get(k)));
         }
         Collections.sort(ret, new Comparator<Pair<Integer, Integer>>() {
             @Override
