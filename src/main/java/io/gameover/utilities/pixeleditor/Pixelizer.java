@@ -96,7 +96,13 @@ public class Pixelizer extends JFrame {
      */
     public Pixelizer() {
         setFocusable(true);
-        setIconImage(new ImageIcon(getClass().getResource("/icon.png").getPath()).getImage());
+        Image icon = new ImageIcon("icon.png").getImage();
+        if(icon!=null){
+            setIconImage(icon);
+            System.err.println("icon set");
+        }else {
+            System.err.println("icon not found");
+        }
         requestFocus();
         frames = new ArrayList<>();
         frames.add(new Frame());

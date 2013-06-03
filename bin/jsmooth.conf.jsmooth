@@ -6,13 +6,12 @@
 <JVMSearchPath>jdkpath</JVMSearchPath>
 <JVMSearchPath>exepath</JVMSearchPath>
 <JVMSearchPath>jview</JVMSearchPath>
-<arguments></arguments>
-<classPath>target\PixelEditor-0.1.0-SNAPSHOT.jar</classPath>
-<classPath>C:\Users\mrs.omartin\.m2\repository\org\apache\commons\commons-lang3\3.1\commons-lang3-3.1.jar</classPath>
+<classPath>commons-lang3-3.1.jar</classPath>
+<classPath>PixelEditor-0.1.0-SNAPSHOT.jar</classPath>
 <currentDirectory>${EXECUTABLEPATH}</currentDirectory>
 <embeddedJar>false</embeddedJar>
-<executableName>bin\pixelizer.exe</executableName>
-<iconLocation>src\main\resources\icon.png</iconLocation>
+<executableName>pixelizer.exe</executableName>
+<iconLocation>..\src\main\resources\icon.png</iconLocation>
 <initialMemoryHeap>-1</initialMemoryHeap>
 <mainClassName>io.gameover.utilities.pixeleditor.Pixelizer</mainClassName>
 <maximumMemoryHeap>-1</maximumMemoryHeap>
@@ -37,7 +36,7 @@
 </skeletonProperties>
 <skeletonProperties>
 <key>JniSmooth</key>
-<value>0</value>
+<value>1</value>
 </skeletonProperties>
 <skeletonProperties>
 <key>Debug</key>
