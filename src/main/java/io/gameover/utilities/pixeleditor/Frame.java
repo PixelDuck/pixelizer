@@ -173,4 +173,19 @@ public class Frame {
         sb.append('\n');
         return sb.toString();
     }
+
+    /**
+     * Replace a color by an other color;
+     * @param colorToReplace
+     * @param newColor
+     */
+    public void switchColor(int colorToReplace, int newColor) {
+        for(int i=0; i< argb.length; i++){
+            for(int j=0; j< argb[0].length; j++){
+                if(argb[i][j]==colorToReplace){
+                    argb[i][j]=newColor;
+                }
+            }
+        }
+    }
 }

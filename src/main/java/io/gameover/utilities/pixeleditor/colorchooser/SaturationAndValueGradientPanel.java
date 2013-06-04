@@ -90,7 +90,6 @@ public class SaturationAndValueGradientPanel extends JPanel implements Observabl
         if(bi==null){
             bi = new BufferedImage(PANEL_SIZE +1, PANEL_SIZE +1, BufferedImage.TYPE_INT_ARGB);
             int[] rgb = ColorUtils.extractRGB(ColorUtils.convertHSVToRGBAsInt(h, 0.95f, 095f));
-            System.out.println("[hue"+h+"]: r:"+rgb[0]+" g:"+rgb[2]+" b"+rgb[2]);
             for(int i=0; i<= PANEL_SIZE; i++){
                 for(int j=0; j<= PANEL_SIZE; j++){
                     float s = (float)i / PANEL_SIZE_AS_FLOAT;

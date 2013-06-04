@@ -9,6 +9,7 @@ public final class ColorUtils {
 
     private ColorUtils(){}
 
+
     /**
      * Convert RGB values (between 0 and 255 integers) to HSV.
      * The hue (H) varies on the 360-degree hue circle (also known as the color wheel),

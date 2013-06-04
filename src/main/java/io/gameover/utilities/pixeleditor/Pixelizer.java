@@ -45,6 +45,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -64,6 +65,7 @@ public class Pixelizer extends JFrame {
     public static final String ACTION_SAVE_AS_GIF = "save_as_GIF";
     public static final String ACTION_CLEAR = "clear";
     public static final String ACTION_CLEAR_SELECTION = "clearSelection";
+    public static final String PIXELIZER = "Pixelizer";
 
     private ImagePanel imagePanel;
 	private JMenuBar appMenuBar;
@@ -90,6 +92,7 @@ public class Pixelizer extends JFrame {
     private Frame frameCopied;
     private JPanel colorsPanel;
     private List<ColorPanel> colorPanels;
+    private MouseListener colorPanelListener;
 
     /**
      * Constructor.
@@ -99,9 +102,6 @@ public class Pixelizer extends JFrame {
         Image icon = new ImageIcon("icon.png").getImage();
         if(icon!=null){
             setIconImage(icon);
-            System.err.println("icon set");
-        }else {
-            System.err.println("icon not found");
         }
         requestFocus();
         frames = new ArrayList<>();
@@ -111,7 +111,7 @@ public class Pixelizer extends JFrame {
         enlightmentMask = new boolean[Frame.NB_PIXELS][Frame.NB_PIXELS];
         reset();
         applyLookAndFeel();
-        setTitle("Pixelizer");
+        setTitle(PIXELIZER);
 
         savedStates = new ArrayList<>();
         currentStateIndex = 0;
@@ -126,6 +126,7 @@ public class Pixelizer extends JFrame {
         setSize(new Dimension(800, 700));
         centerFrame();
         setVisible(true);
+        refreshCurrentColors();
         refresh();
     }
 
@@ -251,19 +252,27 @@ public class Pixelizer extends JFrame {
     }
 
 
-
-    public void resizeColorPanels(int newSize){
-        if(newSize!=colorPanels.size()){
-            while(newSize>colorPanels.size()){
+    public void resizeColorPanels(int newSize) {
+        if (newSize != colorPanels.size()) {
+            while (newSize > colorPanels.size()) {
                 ColorPanel cp = new ColorPanel();
                 colorsPanel.add(cp, LayoutUtils.xyi(colorPanels.size() / 6 + 1, colorPanels.size() % 6 + 1, 0d, 0d, new Insets(2, 2, 2, 2)));
                 colorPanels.add(cp);
+                cp.addMouseListener(getColorPanelListener());
             }
-            while(newSize<colorPanels.size()){
-                ColorPanel cp = colorPanels.remove(colorPanels.size()-1);
+            while (newSize < colorPanels.size()) {
+                ColorPanel cp = colorPanels.remove(colorPanels.size() - 1);
+                cp.removeMouseListener(getColorPanelListener());
                 colorsPanel.remove(cp);
             }
         }
+    }
+
+    public MouseListener getColorPanelListener() {
+        if(colorPanelListener==null){
+            colorPanelListener = new ColorPanelListener(this);
+        }
+        return colorPanelListener;
     }
 
     public static class SelectFramePopClickListener extends MouseAdapter {
@@ -863,7 +872,7 @@ public class Pixelizer extends JFrame {
         List<Pair<Integer,Integer>> colors = frames.get(currentFrameIndex).extractColors();
         resizeColorPanels(colors.size());
         for(int i=0; i<colors.size(); i++){
-            colorPanels.get(i).setColor(colors.get(i).getKey());
+            colorPanels.get(i).setColorAndCount(colors.get(i).getKey(), colors.get(i).getValue());
         }
         refresh();
     }
@@ -993,4 +1002,42 @@ public class Pixelizer extends JFrame {
         refresh();
     }
 
+    private class ColorPanelListener extends MouseAdapter{
+        private final Pixelizer parent;
+        private ColorPanel cp;
+
+        public ColorPanelListener(Pixelizer pixelizer) {
+            this.parent = pixelizer;
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            cp = (ColorPanel) e.getComponent();
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            if(cp==e.getComponent()){
+                cp = null;
+            }
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            if(e.getComponent()==cp){
+                if(SwingUtilities.isLeftMouseButton(e)){
+                    parent.colorChooser.setColor(ColorUtils.extractRGB(cp.getColor()));
+                } else if(SwingUtilities.isRightMouseButton(e)){
+                    parent.switchColor(cp.getColor(), parent.getColorChooser().getColor());
+                }
+            }
+        }
+    }
+
+    private void switchColor(int colorToReplace, int newColor) {
+        saveBeforeModification();
+        getCurrentFrame().switchColor(colorToReplace, newColor);
+        refreshCurrentColors();
+        refresh();
+    }
 }

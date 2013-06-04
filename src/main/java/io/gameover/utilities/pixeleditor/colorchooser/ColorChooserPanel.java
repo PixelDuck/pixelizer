@@ -120,7 +120,6 @@ public class ColorChooserPanel extends JPanel implements Observable<ColorChangeE
     public String getColorAsHexa(){
         int rgb = getColor();
         String h = Integer.toHexString(rgb);
-        System.out.println("h "+h);
         return h.substring(h.length()-6);
     }
 

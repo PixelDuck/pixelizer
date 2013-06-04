@@ -146,7 +146,6 @@ public class HueGradientPanel extends JPanel implements Observable<HueChangeEven
 
         int rgb = ColorUtils.convertHSVToRGBAsInt(hue, SATURATION, VALUE);
         float[] hsv = ColorUtils.convertRGBToHSV(ColorUtils.extractRGB(rgb));
-        System.out.println("Hue change; "+this.hue+" recompute: "+hsv[0]);
 
         if(observers.size()>0){
             for (Observer<HueChangeEvent> observer : observers) {
