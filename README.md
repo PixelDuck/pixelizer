@@ -1,8 +1,6 @@
 pixelizer
 =========
 
-by ekki77
-
 pixel editor for game sprites and tiles
 build with java and swing
 
@@ -18,3 +16,4 @@ license: MIT License
 
     Except as contained in this notice, the name of the copyright holders shall not be used in advertising or otherwise to promote the sale, use or other dealings in this Software without prior written authorization from the copyright holders.  »
 
+Web site: http://ekki77.github.io/pixelizer/
