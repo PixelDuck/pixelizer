@@ -1,3 +1,4 @@
+![image](http://ekki77.github.io/pixelizer/images/icon-256.png)
 pixelizer
 =========
 
